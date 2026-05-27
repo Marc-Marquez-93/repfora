@@ -76,14 +76,21 @@ export async function notifyRejection(request, observations) {
 
 export async function notifyNewRequest(request, instructorName) {
   const coordinator = await complementaryHelper.findComplementaryCoordinator();
-  if (!coordinator) {
-    console.log("[COMPLEMENTARY-EMAIL] Coordinador de complementarias no encontrado en BD");
+  const programmers = await complementaryHelper.findComplementaryProgrammers();
+
+  if (!coordinator && programmers.length === 0) {
+    console.log("[COMPLEMENTARY-EMAIL] Ni coordinador ni programadores de complementarias encontrados en BD");
     return;
   }
 
+  const recipientEmails = [
+    coordinator?.email,
+    ...programmers.map((p) => p.email),
+  ].filter(Boolean);
+
   const subject = `Nueva Solicitud de Complementaria - ${request.catalogCourseName}`;
   const payload = {
-    coordinatorName: coordinator.name || "Coordinador",
+    coordinatorName: coordinator?.name || "Coordinador",
     instructorName: instructorName || "Instructor",
     courseName: request.catalogCourseName,
     courseCode: request.catalogCourseCode,
@@ -93,7 +100,7 @@ export async function notifyNewRequest(request, instructorName) {
     numAprendices: request.numAprendices || 0,
   };
   await sendComplementaryEmail(
-    [coordinator.email],
+    recipientEmails,
     subject,
     payload,
     "./utils/emails/template/nuevaSolicitudComplementaria.hbs"

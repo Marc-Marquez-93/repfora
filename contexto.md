@@ -1,15 +1,30 @@
 # Project Context & Analysis: Repfora
 
-This document summarizes the current state, tech stack, and structure of the local "Frankenstein" workspace for the `repfora` project.
+Este documento resume el estado actual, la pila tecnológica y la estructura arquitectónica del espacio de trabajo local (conocido como repositorio "Frankenstein") para el proyecto `repfora`, así como un análisis detallado del estado del repositorio oficial (`sena-cat-development/repfora`).
 
-## Tech Stack
+## 1. Arquitectura de Repositorios (Local vs Oficial)
+
+### El Repositorio Oficial (`sena-cat-development`)
+El repositorio oficial maneja una estructura de **ramas separadas por entorno**:
+- **Rama `backend`**: Contiene exclusivamente el código de Node.js en la raíz del repositorio.
+- **Rama `frontend`**: Contiene exclusivamente el código de Vue/Vite en la raíz.
+- **Ramas de desarrolladores**: Cada desarrollador (Diego, David, Camilo, Jeison, etc.) tiene su propia rama donde trabajan características específicas.
+
+### El Repositorio Local ("Frankenstein")
+El repositorio local actual (`Marc-Marquez-93/repfora`) unificó ambas partes en una sola rama `main`, creando dos carpetas distintas:
+- `/backend`: Contiene todo el entorno de Node.
+- `/frontend`: Contiene todo el entorno de Vue.
+
+Esta estructura facilita el desarrollo unificado, pero requiere el uso de comandos Git avanzados (`git merge -X subtree`) para sincronizar cambios con las ramas aisladas del repositorio oficial sin causar conflictos de rutas.
+
+## 2. Pila Tecnológica (Tech Stack)
 
 ### Backend
-- **Framework:** Node.js with Express (`express`)
-- **Database:** MongoDB via Mongoose (`mongoose`)
-- **Authentication & Security:** JWT (`jsonwebtoken`), bcrypt (`bcryptjs`), CORS
-- **Email/Notifications:** Nodemailer (`nodemailer`)
-- **Utilities:** Excel processing (`exceljs`, `xlsx`), File Uploads (`express-fileupload`), Cron Jobs (`node-cron`), PDF/Image manipulation (`tinify`, `archiver`)
+- **Framework:** Node.js con Express (`express`)
+- **Database:** MongoDB vía Mongoose (`mongoose`)
+- **Autenticación & Seguridad:** JWT (`jsonwebtoken`), bcrypt (`bcryptjs`), CORS
+- **Email/Notificaciones:** Nodemailer (`nodemailer`) con plantillas Handlebars (`hbs`)
+- **Utilidades:** Procesamiento de Excel (`exceljs`, `xlsx`), subida de archivos (`express-fileupload`), Cron Jobs (`node-cron`), manejo de PDFs e imágenes (`tinify`, `archiver`)
 
 ### Frontend
 - **Framework:** Vue 3 (`vue`)
@@ -17,37 +32,28 @@ This document summarizes the current state, tech stack, and structure of the loc
 - **UI Library:** Quasar Framework (`quasar`)
 - **State Management:** Pinia (`pinia`)
 - **Routing:** Vue Router (`vue-router`)
-- **Key Libraries:** FullCalendar (`@fullcalendar/vue3`), Axios (`axios`), Chart.js (`chart.js`), HTML2PDF (`html2pdf.js`)
+- **Librerías Clave:** FullCalendar (`@fullcalendar/vue3`), Axios (`axios`), Chart.js (`chart.js`), HTML2PDF (`html2pdf.js`)
 
-## Project Structure & Architecture
+## 3. Estado de Ramas y Análisis de Integración (Mayo 2026)
 
-### Backend (`/backend`)
-The backend is structured using a standard MVC-like pattern for Express applications:
-- **`models/`**: Mongoose schemas defining the database entities. Key models include:
-  - **Core:** `User`, `Instructor`, `Learner`, `Fiche`, `Program`
-  - **Schedules:** `Schedule`, `HistorySchedule`, `OthersSchedule`
-  - **Planning:** `Planning`, `PlanningTemplate` *(relevant for Step 3)*
-  - **Complementary:** `ComplementaryCatalog`, `ComplementaryRequest` *(relevant for Step 3)*
-  - **System/Admin:** `AppSettings`, `Binnacle`, `CurrentAuditState`, `DailyAuditLog`
-- **`routes/`, `controller/`, `services/`**: Standard layers to handle HTTP requests, business logic, and database operations.
-- **`cron/`**: Background jobs (e.g., automated tasks running via `node-cron`).
-- **`helpers/`, `utils/`, `validations/`**: Reusable utility functions and request validation middleware.
+Durante la sincronización del proyecto, se realizó una investigación forense de las ramas oficiales para evitar la pérdida de código crítico (específicamente el módulo de `complementarias` y `planeaciones`).
 
-### Frontend (`/frontend`)
-The frontend is a Single Page Application (SPA) built with Vue 3 and Quasar:
-- **`src/components/`**: Reusable UI components.
-- **`src/views/`**: Main page views/screens of the application.
-- **`src/store/`**: Pinia stores for global state management.
-- **`src/services/`**: Axios services to communicate with the backend API.
-- **`src/routes/`**: Vue Router configuration.
-- **`src/layouts/`**: Base layouts (e.g., standard layout with a navigation drawer and header).
+### Análisis del Frontend
+- **Rama `sena-oficial/frontend`**: Desactualizada (último commit el 20 de mayo). No contiene el módulo de complementarias.
+- **Rama de Diego (`sena-oficial/diego`)**: Contiene las actualizaciones más recientes (25 de mayo) e integra correcciones de otros desarrolladores como Jeison.
+- **Estado Local:** La carpeta `frontend/` actual contiene el código provisto por Diego más el desarrollo del módulo de complementarias. **Es la versión más avanzada y no debe sobrescribirse con la rama oficial `frontend`.**
 
-## Current Project State
+### Análisis del Backend
+- **Rama `sena-oficial/backend`**: Desactualizada. Al intentar integrarla, se comprobó que eliminaba las rutas y servicios del módulo de complementarias.
+- **Ramas de David y Camilo**: Ambos desarrolladores trabajaron en el backend hasta el 26 de mayo. 
+- **Estado Local:** Se integró la rama de **David** (`sena-oficial/david`) hacia la carpeta `backend/` local, ya que contenía la lógica más reciente para el módulo de complementarias (asignación de coordinadores y programadores, y envío de notificaciones de nuevas solicitudes).
 
-This is a comprehensive platform for the SENA (Servicio Nacional de Aprendizaje) focused on:
-1. **User and Role Management**: Instructors, Learners, Coordinators, etc.
-2. **Scheduling**: Managing complex schedules (`Horarios`) for different groups (`Fichas`) and instructors.
-3. **Plannings (`planeaciones`)**: Modules for managing educational planning and templates.
-4. **Complementary Courses (`complementarias`)**: Handling catalogs and requests for complementary educational courses.
+## 4. Verificación de Seguridad: Flujo de Recuperación de Contraseña
 
-**Security Note:** The root directory contains `Horarios_SENA.zip`, which is noted to contain valid, confidential data.
+Se auditó el flujo de *Reset Password* (Token y Email) garantizando su funcionalidad y seguridad:
+1. **Backend (`users.controller.js`):** El endpoint recibe el correo, verifica la existencia del usuario y utiliza `jsonwebtoken` para generar un token criptográfico de recuperación.
+2. **Nodemailer:** Utilizando la función utilitaria `sendEmail`, el sistema se conecta a un servidor SMTP y despacha un correo utilizando la plantilla `resertPassword.hbs`, adjuntando el token en una URL segura.
+3. **Frontend (`ResetPassword.vue`):** El enrutador intercepta dinámicamente la URL (`/resetpassword/:token`), extrae el token y lo envía junto con la nueva contraseña hacia el endpoint de actualización en el backend, cerrando el ciclo exitosamente.
+
+---
+*Documento actualizado automáticamente por Antigravity AI tras el análisis del repositorio.*

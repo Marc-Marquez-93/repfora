@@ -214,6 +214,10 @@ const ComplementaryRequestSquema = new Schema(
       type: Number,
       default: 0,
     },
+    visto: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

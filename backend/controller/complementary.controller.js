@@ -516,6 +516,11 @@ compCtrl.getRequestId = async (req, res) => {
       }
     }
 
+    if (!request.visto) {
+      request.visto = true;
+      await request.save();
+    }
+
     res.json(request);
   } catch (error) {
     res.status(400).json({ msg: "No fue posible terminar la operacion" });

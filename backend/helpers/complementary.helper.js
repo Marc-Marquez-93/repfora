@@ -2,6 +2,7 @@ import Instructor from "../models/Instructor.js";
 import ComplementaryCatalog from "../models/ComplementaryCatalog.js";
 import ComplementaryRequest from "../models/ComplementaryRequest.js";
 import User from "../models/User.js";
+import Coordination from "../models/Coordination.js";
 
 const complementaryHelper = {};
 
@@ -157,23 +158,28 @@ complementaryHelper.validateStateTransition = async (id, newState) => {
 
 // ==================== Normalización y decodificación ====================
 
-const COMPLEMENTARY_COORDINATOR_EMAIL = "overgarar@sena.edu.co";
-
 complementaryHelper.findComplementaryCoordinator = async () => {
   try {
-    const coordinator = await User.findOne({
+    const coordination = await Coordination.findOne({
+      name: "PROGRAMAS ESPECIALES",
       status: 0,
-      role: "COORDINADOR",
-      email: COMPLEMENTARY_COORDINATOR_EMAIL,
-    });
-    return coordinator;
+    }).populate("coordinator");
+    return coordination?.coordinator || null;
   } catch (error) {
     throw new Error("Error al buscar coordinador de complementarias");
   }
 };
 
-complementaryHelper.getComplementaryCoordinatorEmail = () => {
-  return COMPLEMENTARY_COORDINATOR_EMAIL;
+complementaryHelper.findComplementaryProgrammers = async () => {
+  try {
+    const coordination = await Coordination.findOne({
+      name: "PROGRAMAS ESPECIALES",
+      status: 0,
+    }).populate("programmers");
+    return coordination?.programmers || [];
+  } catch (error) {
+    throw new Error("Error al buscar programadores de complementarias");
+  }
 };
 
 complementaryHelper.normalizeRequestFields = (body) => {
