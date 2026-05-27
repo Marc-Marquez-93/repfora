@@ -215,3 +215,7 @@ scripts/
 # Ignorar credenciales de GCP
 uploads/credenciales/*.json
 utils/uploadFiles/*.json
+
+# Archivos de entorno SanGil
+envSanGil
+envSanGil.txt
