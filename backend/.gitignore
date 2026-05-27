@@ -212,3 +212,6 @@ utils/uploadFiles/*.json
 
 # Migration scripts (local only)
 scripts/
+# Ignorar credenciales de GCP
+uploads/credenciales/*.json
+utils/uploadFiles/*.json
