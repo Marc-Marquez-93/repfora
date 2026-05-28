@@ -4,32 +4,9 @@ Modelo de comite:
 
 import { Schema, model } from "mongoose";
 
-const CommitteeResultSchema = new Schema(
-  {
-    learner: {
-      type: Schema.Types.ObjectId,
-      ref: "Learner",
-      required: true
-    },
-    decision: {
-      type: String,
-      enum: [
-        "PLAN_DE_MEJORAMIENTO",
-        "LLAMADO_DE_ATENCION",
-        "CONDICIONAMIENTO_DE_MATRICULA",
-        "CANCELACION_DE_MATRICULA",
-        "NINGUNA"
-      ],
-      required: true
-    },
-    conclusions: {
-      type: String,
-      required: true
-    }
-  },
-  { _id: false }
-);
-
+/**
+ * Evidence Schema (Subdocumento)
+ */
 const EvidenceSchema = new Schema(
   {
     fileName: { type: String, required: true },
@@ -39,30 +16,23 @@ const EvidenceSchema = new Schema(
   { _id: false }
 );
 
-const CommitteeSchema = new Schema(
+/**
+ * LearnerDetail Schema (Subdocumento)
+ * Almacena la identidad del aprendiz, su novedad particular y el dictamen final del comité.
+ */
+const LearnerDetailSchema = new Schema(
   {
-    // --- CONTEXTO GEOGRÁFICO Y ESTRUCTURAL ---
-    town: {
-      type: Schema.Types.ObjectId,
-      ref: "Town",
-      required: [true, "The town reference ID is required"]
-    },
-    fiche: {
-      type: Schema.Types.ObjectId,
-      ref: "Fiche",
-      required: [true, "The fiche reference is required"]
-    },
-    shift: {
-      type: String,
-      enum: ["MORNING", "AFTERNOON", "NIGHT", "WEEKEND", "VIRTUAL", "OTHER"],
-      required: [true, "The training shift is required"]
-    },
+    // --- DATOS PERSONALES DEL APRENDIZ ---
+    name: { type: String, required: true },
+    documentType: { type: String, required: true },
+    documentNumber: { type: String, required: true },
+    email: { type: String, required: true },
 
-    // --- ELEMENTOS DE LA SOLICITUD ---
-    type: {
+    // --- ELEMENTOS DE LA SOLICITUD (ESPECÍFICOS POR APRENDIZ) ---
+    noveltyType: {
       type: String,
       enum: ["ACADEMIC", "DISCIPLINARY", "BOTH"],
-      required: [true, "The novelty type must be ACADEMIC, DISCIPLINARY, or BOTH"]
+      required: [true, "The novelty type is required"]
     },
     description: {
       type: String,
@@ -78,12 +48,49 @@ const CommitteeSchema = new Schema(
         type: String
       }
     ],
+
+    // --- RESULTADOS Y DICTAMEN (SE LLENAN AL FINALIZAR EL COMITÉ) ---
+    decision: {
+      type: String,
+      enum: [
+        "PLAN_DE_MEJORAMIENTO",
+        "LLAMADO_DE_ATENCION",
+        "CONDICIONAMIENTO_DE_MATRICULA",
+        "CANCELACION_DE_MATRICULA",
+        "OTRA",
+        "PENDING"
+      ],
+      default: "PENDING"
+    },
+    conclusions: {
+      type: String,
+      default: ""
+    }
+  }
+);
+
+/**
+ * Committee Schema Principal
+ */
+const CommitteeSchema = new Schema(
+  {
+    // --- CONTEXTO GEOGRÁFICO Y ESTRUCTURAL ---
+    fiche: {
+      type: Schema.Types.ObjectId,
+      ref: "Fiche",
+      required: [true, "The fiche reference is required"]
+    },
+
+    // --- APRENDICES INDICIADOS (Identidad + Solicitud + Resultados) ---
+    learners: [LearnerDetailSchema],
+
+    // --- EVIDENCIAS GENERALES ADJUNTAS ---
     evidence: {
       type: [EvidenceSchema],
       default: []
     },
 
-    // --- SOLICITANTES E INDICIADOS ---
+    // --- SOLICITANTES ---
     requestingInstructors: [
       {
         type: Schema.Types.ObjectId,
@@ -91,51 +98,44 @@ const CommitteeSchema = new Schema(
         required: true
       }
     ], // Instructores que radican o solicitan el comité
-    learners: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Learner",
-        required: true
-      }
-    ], // Aprendices citados o indiciados en el caso
 
     // --- INTEGRANTES LOGÍSTICOS ---
     coordinator: {
       type: Schema.Types.ObjectId,
       ref: "User"
-    }, // Coordinador académico encargado de presidir e instalar el comité
+    }, // Coordinador académico
     invitedInstructors: [
       {
         type: Schema.Types.ObjectId,
         ref: "Instructor"
       }
-    ], // Instructores adicionales citados con derecho a voz y voto
+    ], // Instructores adicionales citados
     wellnessRepresentative: {
       type: Schema.Types.ObjectId,
       ref: "Instructor"
-    }, // Profesional del área de Bienestar al Aprendiz (rinde como instructor)
+    }, // Representante de Bienestar
     newsRepresentative: {
       type: Schema.Types.ObjectId,
       ref: "User"
-    }, // Profesional o apoyo administrativo del proceso de comités (Rol: NOVEDADES)
+    }, // Profesional de Novedades
 
     // --- ASISTENTES LIBRES Y COMUNICACIÓN ---
     spokesperson: {
       type: String
-    }, // Vocero del grupo/ficha correspondiente
+    }, // Vocero
     representative: {
       type: String
-    }, // Representante estudiantil de la jornada
+    }, // Representante estudiantil
     additionalAssistants: [
       {
         type: String
       }
-    ], // Otros asistentes libres convocados o invitados de forma externa
+    ], // Otros asistentes libres
     participantEmails: [
       {
         type: String
       }
-    ], // Correos electrónicos consolidados de TODOS los participantes para notificaciones
+    ], // Correos electrónicos para notificaciones masivas
 
     // --- DATOS DE AGENDAMIENTO ---
     meetingDate: {
@@ -145,7 +145,7 @@ const CommitteeSchema = new Schema(
       type: String
     },
 
-    // --- HISTORIAL, RESOLUCIONES Y CIERRE ---
+    // --- HISTORIAL Y CIERRE ---
     faultSeverity: {
       type: String,
       enum: ["LIGHT", "SERIOUS", "VERY_SERIOUS", "PENDING"],
@@ -155,7 +155,6 @@ const CommitteeSchema = new Schema(
       type: String,
       default: ""
     },
-    results: [CommitteeResultSchema],
     status: {
       type: String,
       enum: ["PENDING", "SCHEDULED", "COMPLETED", "CANCELLED"],
