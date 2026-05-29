@@ -38,6 +38,10 @@ const LearnerDetailSchema = new Schema(
       type: String,
       required: [true, "Detailed description of facts is required"]
     },
+    manual:{
+      type: String,
+      required: true,
+    },
     competences: [
       {
         type: String

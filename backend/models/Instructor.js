@@ -81,7 +81,15 @@ const InstructorSquema = new Schema(
       type: Date,
       default: null,
     },
-  }, 
+    accessCodeComites: {
+      type: String,
+      default: null,
+    },
+    accessCodeComitesCreatedAt: {
+      type: Date,
+      default: null,
+    },
+  },
   {
     timestamps: true,
   }

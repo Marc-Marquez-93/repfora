@@ -132,6 +132,24 @@ webToken.generateTokenComplementaria = async (instructor) => {
   }
 };
 
+webToken.generateTokenComites = async (instructor) => {
+  const payload = {
+    id: instructor._id,
+    rol: "INSTRUCTOR",
+    email: instructor.email,
+    scope: "VERIFY",
+  };
+  try {
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: "2h",
+      algorithm: "HS256",
+    });
+    return token;
+  } catch (err) {
+    throw new Error("Error al generar el token temporal");
+  }
+};
+
 webToken.validateTokenComplementaria = async (token) => {
   try {
     if (!token) throw new Error("No se ha enviado el token");

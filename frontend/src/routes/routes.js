@@ -355,6 +355,22 @@ export const routes = [
     beforeEnter: auth,
   },
   {
+    path: "/comites/login",
+    name: "loginComites",
+    component: () => import("../views/LoginComites.vue"),
+    meta: {
+      rol: ["USER"],
+    },
+    beforeEnter: auth,
+  },
+  {
+    path: "/home/comites",
+    name: "homeComites",
+    component: () => import("../views/HomeComites.vue"),
+    meta: { rol: ["USER", "INSTRUCTOR"] },
+    beforeEnter: auth,
+  },
+  {
     path: "/:catchAll(.*)",
     redirect: "/",
   },

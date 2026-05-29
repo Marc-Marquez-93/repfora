@@ -39,6 +39,7 @@ import routerAdminAudit from "./routes/adminAudit.routes.js"
 import { initCron } from "./services/cronService.js"
 import { initEmailSettings } from "./services/notificationService.js"
 import { routerComplementary } from "./routes/complementary.routes.js"
+import { routerComites } from "./routes/comites.routes.js";
 import { routerPlanning } from "./routes/planning.routes.js";
 
 dotenv.config();
@@ -310,7 +311,8 @@ class Server {
           { name: 'Health', description: 'Verificación de estado del servidor' },
           { name: 'Municipios', description: 'Gestión de municipios y departamentos' },
           { name: 'Omisiones', description: 'Registro de omisiones de aprendices' },
-          { name: 'Complementarias', description: 'Acceso al modulo de Formacion Complementaria' }
+          { name: 'Complementarias', description: 'Acceso al modulo de Formacion Complementaria' },
+          { name: 'Comites', description: 'Acceso al modulo de Comités' }
         ]
       },
       apis: ['./routes/*.js', './controller/*.js']
@@ -476,6 +478,7 @@ class Server {
     this.app.use("/api/auditoria", routerAuditoria);
     this.app.use("/api/storage", routerStorage);
     this.app.use("/api/complementary", routerComplementary);
+    this.app.use("/api/comites", routerComites);
     this.app.use("/api/planning", routerPlanning);
     this.app.use("/admin/audit", routerAdminAudit);
     this.app.use("/life", (req, res) => {

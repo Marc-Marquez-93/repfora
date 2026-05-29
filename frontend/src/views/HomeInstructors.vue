@@ -41,6 +41,11 @@
       route: "/complementarias",
       image: "/images/complementary.png", // TODO: Reemplazar con imagen definitiva
     },
+    {
+      title: "Comités",
+      route: "/comites/login",
+      image: "/images/comites.png",
+    },
   ]);
   </script>
   
