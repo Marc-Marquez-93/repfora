@@ -44,7 +44,7 @@
     {
       title: "Comités",
       route: "/comites/login",
-      image: "/images/comites.png",
+      image: "/images/reports2.jpg",
     },
   ]);
   </script>

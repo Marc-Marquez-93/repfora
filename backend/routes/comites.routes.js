@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { comitesCtrl } from "../controller/comites.controller.js";
 import { comitesVali } from "../validations/comites.validation.js";
+import { committeeCtrl } from "../controller/committee.controller.js";
 
 const {
   validateSendCode,
@@ -11,6 +12,19 @@ const {
   sendCode,
   verifyCode,
 } = comitesCtrl;
+
+const {
+  getCommittees,
+  getCommitteeById,
+  registerCommittee,
+  updateCommittee,
+  cancelCommittee,
+  getCommitteesByFiche,
+  getPendingCommittees,
+  getScheduledCommittees,
+  searchFiches,
+  searchInstructors,
+} = committeeCtrl;
 
 const routerComites = Router();
 
@@ -68,5 +82,221 @@ routerComites.post("/access/send-code", validateSendCode, sendCode);
  *         description: Acceso concedido, retorna token JWT
  */
 routerComites.post("/access/verify-code", validateVerifyCode, verifyCode);
+
+// ==================== CRUD de Comités (Sin proteger por ahora) ====================
+
+/**
+ * @swagger
+ * /api/comites:
+ *   get:
+ *     summary: Obtiene todos los comités
+ *     tags: [Comites]
+ *     responses:
+ *       200:
+ *         description: Lista de comités
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Committee'
+ */
+routerComites.get("/", getCommittees);
+
+/**
+ * @swagger
+ * /api/comites/pending:
+ *   get:
+ *     summary: Obtiene comités pendientes
+ *     tags: [Comites]
+ *     responses:
+ *       200:
+ *         description: Lista de comités pendientes
+ */
+routerComites.get("/pending", getPendingCommittees);
+
+/**
+ * @swagger
+ * /api/comites/scheduled:
+ *   get:
+ *     summary: Obtiene comités programados
+ *     tags: [Comites]
+ *     responses:
+ *       200:
+ *         description: Lista de comités programados
+ */
+routerComites.get("/scheduled", getScheduledCommittees);
+
+/**
+ * @swagger
+ * /api/comites/fiche/:ficheId:
+ *   get:
+ *     summary: Obtiene comités por ficha
+ *     tags: [Comites]
+ *     parameters:
+ *       - in: path
+ *         name: ficheId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de comités de la ficha
+ */
+routerComites.get("/fiche/:ficheId", getCommitteesByFiche);
+
+/**
+ * @swagger
+ * /api/comites/:id:
+ *   get:
+ *     summary: Obtiene un comité por ID
+ *     tags: [Comites]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Comité encontrado
+ *       404:
+ *         description: Comité no encontrado
+ */
+routerComites.get("/:id", getCommitteeById);
+
+/**
+ * @swagger
+ * /api/comites:
+ *   post:
+ *     summary: Crea un nuevo comité
+ *     tags: [Comites]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fiche
+ *               - requestingInstructors
+ *               - learners
+ *             properties:
+ *               fiche:
+ *                 type: string
+ *               requestingInstructors:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               learners:
+ *                 type: array
+ *               meetingDate:
+ *                 type: string
+ *               meetingTime:
+ *                 type: string
+ *               meetingLocation:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Comité creado correctamente
+ *       400:
+ *         description: Error al crear comité
+ */
+routerComites.post("/", registerCommittee);
+
+/**
+ * @swagger
+ * /api/comites/:id:
+ *   put:
+ *     summary: Actualiza un comité
+ *     tags: [Comites]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               meetingDate:
+ *                 type: string
+ *               meetingTime:
+ *                 type: string
+ *               meetingLocation:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *               learners:
+ *                 type: array
+ *     responses:
+ *       200:
+ *         description: Comité actualizado correctamente
+ *       404:
+ *         description: Comité no encontrado
+ */
+routerComites.put("/:id", updateCommittee);
+
+/**
+ * @swagger
+ * /api/comites/:id/cancel:
+ *   put:
+ *     summary: Cancela un comité
+ *     tags: [Comites]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Comité cancelado correctamente
+ *       404:
+ *         description: Comité no encontrado
+ */
+routerComites.put("/:id/cancel", cancelCommittee);
+
+// ==================== Búsquedas para comités ====================
+
+/**
+ * @swagger
+ * /api/comites/search/fiches:
+ *   get:
+ *     summary: Buscar fichas por número
+ *     tags: [Comites]
+ *     parameters:
+ *       - in: query
+ *         name: number
+ *         schema:
+ *           type: string
+ *         description: Número de ficha a buscar
+ *     responses:
+ *       200:
+ *         description: Lista de fichas encontradas
+ */
+routerComites.get("/search/fiches", searchFiches);
+
+/**
+ * @swagger
+ * /api/comites/search/instructors:
+ *   get:
+ *     summary: Buscar instructores por nombre o documento
+ *     tags: [Comites]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Texto a buscar en nombre o documento
+ *     responses:
+ *       200:
+ *         description: Lista de instructores encontrados
+ */
+routerComites.get("/search/instructors", searchInstructors);
 
 export { routerComites };
