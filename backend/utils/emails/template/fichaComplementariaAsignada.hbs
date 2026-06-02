@@ -2,13 +2,12 @@
   <head>
     <style>
       .container { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; }
-      .header { background-color: #1565c0; color: #fff; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+      .header { background-color: #2e7d32; color: #fff; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
       .body { padding: 20px; background-color: #f9f9f9; }
-      .ficha-box { font-size: 28px; font-weight: bold; color: #1565c0; background-color: #e3f2fd; padding: 16px 32px; border-radius: 8px; text-align: center; margin: 16px 0; letter-spacing: 4px; }
       .detail-row { display: flex; padding: 8px 0; border-bottom: 1px solid #e0e0e0; }
       .detail-label { font-weight: bold; width: 40%; color: #555; }
       .detail-value { width: 60%; }
-      .footer { padding: 15px 20px; background-color: #e3f2fd; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; text-align: center; }
+      .footer { padding: 15px 20px; background-color: #e8f5e9; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; text-align: center; }
     </style>
   </head>
   <body>
@@ -18,9 +17,16 @@
       </div>
       <div class="body">
         <p>Cordial saludo, <strong>{{instructorName}}</strong></p>
-        <p>Se le ha asignado el numero de ficha para su programa de formacion complementaria:</p>
-        <div class="ficha-box">{{fichaNumber}}</div>
-        <h3>Detalles del programa:</h3>
+        <p>Se le ha asignado la ficha de caracterizacion para su programa de formacion complementaria.</p>
+        <h3>Detalles de la solicitud:</h3>
+        <div class="detail-row">
+          <span class="detail-label">Numero de solicitud:</span>
+          <span class="detail-value">{{numeroSolicitud}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Ficha de caracterizacion:</span>
+          <span class="detail-value">{{fichaCaracterizacion}}</span>
+        </div>
         <div class="detail-row">
           <span class="detail-label">Curso:</span>
           <span class="detail-value">{{courseName}}</span>
@@ -41,14 +47,7 @@
           <span class="detail-label">Fecha de fin:</span>
           <span class="detail-value">{{fechaFin}}</span>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">Inscripciones:</span>
-          <span class="detail-value">{{fechaInscripcion}}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Matricula:</span>
-          <span class="detail-value">{{fechaMatriculaInicio}} - {{fechaMatriculaFin}}</span>
-        </div>
+        <p>Su solicitud continuara con el proceso de programacion horaria.</p>
       </div>
       <div class="footer">
         Este mensaje fue enviado automaticamente por el sistema REPORA - SENA. No responda a este correo.

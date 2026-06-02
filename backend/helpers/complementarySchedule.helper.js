@@ -20,6 +20,12 @@ complementaryScheduleHelper.validateRequestProgrammable = async (requestId) => {
       `La solicitud debe estar en estado FICHA_ASIGNADA, INSCRIPCION o PROGRAMADA para poder programarla. Estado actual: ${request.state}`
     );
   }
+  // REUNION2 Cambio 4: el coordinador debe completar datos de formación antes de programar
+  if (!request.formationDataCompleted) {
+    throw new Error(
+      "Los datos de formación no han sido completados por el coordinador"
+    );
+  }
   return request;
 };
 

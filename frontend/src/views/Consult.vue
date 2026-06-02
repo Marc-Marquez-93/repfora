@@ -532,7 +532,6 @@ function generateCalendar() {
 
 async function getFiches() {
   const res = await get("/fiches?status=0");
-  console.log(res);
   res.forEach((row, index) => {
     optionsFiches.value.push({
       label: `${row.number} - ${row.program.name}`,

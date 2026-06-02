@@ -4,12 +4,15 @@ FROM node:20-slim
 # Instalamos OpenSSL y MongoDB Database Tools (mongodump, mongorestore)
 # y limpiamos la caché de apt para mantener la imagen pequeña.
 RUN apt-get update && \
-    apt-get install -y openssl wget gnupg && \
+    apt-get install -y openssl wget gnupg python3 python3-pip python3-venv && \
     wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | apt-key add - && \
     echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/debian bookworm/mongodb-org/7.0 main" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list && \
     apt-get update && \
     apt-get install -y mongodb-database-tools && \
     rm -rf /var/lib/apt/lists/*
+
+# Instalamos las librerías de Python requeridas
+RUN pip3 install --no-cache-dir --break-system-packages pdfplumber requests
 
 # Establecemos el directorio de trabajo
 WORKDIR /app

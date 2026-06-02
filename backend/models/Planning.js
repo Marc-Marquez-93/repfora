@@ -17,15 +17,15 @@ const activitySchema = new mongoose.Schema({
     id: { type: String },
     name: { type: String },
     type: { type: String },
-    assignmentStatus: { 
-      type: String, 
+    assignmentStatus: {
+      type: String,
       enum: ['pending', 'confirmed', 'rejected'],
-      default: 'pending' 
+      default: 'pending'
     }
   },
   scheduleDetails: {
     assignedDays: [String],
-    shift: { type: String, enum: ['morning', 'afternoon', 'night', '', null] },
+    shift: { type: String, enum: ['morning', 'afternoon', 'night', 'diurna', 'nocturna', 'mixta_manana', 'mixta_manana_tarde', '', null] },
     hoursPerDay: { type: Number },
     calendarNotes: { type: String }
   }
@@ -45,14 +45,15 @@ const competenceSchema = new mongoose.Schema({
     conceptsAndPrinciples: [String],
     processes: [String]
   },
+  evaluationCriteria: [String], // CAMPO AÑADIDO PARA EL POOL GLOBAL
   learningOutcomes: [rapSchema]
 }, { _id: false });
 
 const phaseSchema = new mongoose.Schema({
-  phase: { 
-    type: String, 
-    enum: ['ANALYSIS', 'PLANNING', 'EXECUTION', 'EVALUATION', 'ETAPA_PRODUCTIVA'],
-    required: true 
+  phase: {
+    type: String,
+    enum: ['INDUCCION', 'ANALYSIS', 'PLANNING', 'EXECUTION', 'EVALUATION', 'ETAPA_PRODUCTIVA'],
+    required: true
   },
   projectActivity: { type: String },
   competencies: [competenceSchema]
@@ -67,15 +68,18 @@ const planningSchema = new mongoose.Schema({
       center: { type: String },
       totalHours: { type: Number },
       lectivaHours: { type: Number },
-      productivaHours: { type: Number }
+      productivaHours: { type: Number },
+      lectivaStartDate: { type: Date },
+      lectivaEndDate: { type: Date },
+      teamPdfProcessed: { type: Boolean, default: false }
     },
     fiche: { type: String, required: true },
     leaderEmail: { type: String },
     startDate: { type: Date },
-    status: { 
-      type: String, 
-      enum: ['draft', 'approved', 'archived'], 
-      default: 'draft' 
+    status: {
+      type: String,
+      enum: ['draft', 'approved', 'archived'],
+      default: 'draft'
     },
     content: [phaseSchema],
     timestamps: {
@@ -86,7 +90,7 @@ const planningSchema = new mongoose.Schema({
 });
 
 // Middleware para actualizar updatedAt
-planningSchema.pre('save', async function() {
+planningSchema.pre('save', async function () {
   this.pedagogicalPlanning.timestamps.updatedAt = new Date();
 });
 

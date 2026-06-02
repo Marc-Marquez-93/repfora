@@ -1,6 +1,5 @@
 import { useRouter } from "vue-router";
 import { storeUser } from "../store/users.js";
-import jwt_decode from "jwt-decode";
 
 const checkAuth = () => {
   const userStore = storeUser();
@@ -24,7 +23,6 @@ const auth = (to, from, next) => {
       userStore.logoutUser();
       return next({ name: "login" });
     }
-
     next();
   } else {
     next({ name: "login" });
@@ -66,16 +64,7 @@ export const routes = [
     name: "homeInstructor",
     component: () => import("../views/HomeInstructors.vue"),
     meta: {
-      rol: ["USER", "PROGRAMADOR", "COORDINADOR", "INSTRUCTOR"],
-    },
-    beforeEnter: auth,
-  },
-  {
-    path: "/complementarias",
-    name: "complementarias",
-    component: () => import("../views/LoginComplementarias.vue"),
-    meta: {
-      rol: ["USER"],
+      rol: ["USER", "PROGRAMADOR", "COORDINADOR"],
     },
     beforeEnter: auth,
   },

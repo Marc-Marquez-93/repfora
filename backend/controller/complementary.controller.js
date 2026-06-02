@@ -1,5 +1,6 @@
 import AppSettings from "../models/AppSettings.js";
 import ComplementaryCatalog from "../models/ComplementaryCatalog.js";
+import ComplementaryCampesena from "../models/ComplementaryCampesena.js";
 import ComplementaryRequest from "../models/ComplementaryRequest.js";
 import Instructor from "../models/Instructor.js";
 import Program from "../models/Program.js";
@@ -11,8 +12,9 @@ import webToken from "../middlewares/webToken.js";
 import { complementaryHelper } from "../helpers/complementary.helper.js";
 import { complementaryScheduleHelper } from "../helpers/complementarySchedule.helper.js";
 import { calculateNumHoursWork } from "../utils/functions/dates.js";
-import { notifyApproval, notifyRejection, notifyFichaAssigned, notifyNewRequest } from "../services/complementaryNotificationService.js";
+import { notifyApproval, notifyRejection, notifyFichaAssigned, notifyNewRequest, notifyCancellation, notifyScheduled, notifyResubmit } from "../services/complementaryNotificationService.js";
 import User from "../models/User.js";
+import ComplementaryCampesena from "../models/ComplementaryCampesena.js";
 import { jobStore } from "../utils/jobStore.js";
 
 const compCtrl = {};
@@ -358,40 +360,140 @@ compCtrl.getComplementaryCoordinator = async (req, res) => {
   }
 };
 
+// REUNION2 Cambio 2: obtener coordinadores activos para desplegable de supervisor
+compCtrl.getCoordinators = async (req, res) => {
+  try {
+    const coordinators = await complementaryHelper.findAllCoordinators();
+    res.json(coordinators);
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+// ==================== REUNION2 Cambio 3: CRUD campesena ====================
+
+//listar campesenas activas
+compCtrl.getCampesenas = async (req, res) => {
+  try {
+    const campesenas = await ComplementaryCampesena.find({ status: 0 })
+      .sort({ nombre: 1 });
+    res.json(campesenas);
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+//obtener una campesena por id
+compCtrl.getCampesenaById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const campesena = await ComplementaryCampesena.findById(id);
+    if (!campesena || campesena.status !== 0) {
+      return res.status(404).json({ msg: "La campesena no existe" });
+    }
+    res.json(campesena);
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+//registrar nueva campesena (solo COORDINADOR)
+compCtrl.registerCampesena = async (req, res) => {
+  const { nombre } = req.body;
+  try {
+    const nueva = new ComplementaryCampesena({
+      nombre: nombre.toUpperCase().trim(),
+    });
+    await nueva.save();
+
+    await registerAction(
+      "COMPLEMENTARIAS",
+      {
+        event: "REGISTRAR CAMPESINA",
+        data: nueva,
+      },
+      req.headers.token
+    );
+
+    res.json({ msg: "Campesena registrada correctamente", data: nueva });
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+//editar campesena (solo COORDINADOR)
+compCtrl.updateCampesena = async (req, res) => {
+  const { id } = req.params;
+  const { nombre } = req.body;
+  try {
+    const campesena = await ComplementaryCampesena.findById(id);
+    if (!campesena || campesena.status !== 0) {
+      return res.status(404).json({ msg: "La campesena no existe" });
+    }
+
+    campesena.nombre = nombre.toUpperCase().trim();
+    await campesena.save();
+
+    await registerAction(
+      "COMPLEMENTARIAS",
+      {
+        event: "ACTUALIZAR CAMPESINA",
+        data: campesena,
+      },
+      req.headers.token
+    );
+
+    res.json({ msg: "Campesena actualizada correctamente", data: campesena });
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+//desactivar campesena (solo COORDINADOR)
+compCtrl.deactivateCampesena = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const campesena = await ComplementaryCampesena.findById(id);
+    if (!campesena || campesena.status !== 0) {
+      return res.status(404).json({ msg: "La campesena no existe" });
+    }
+
+    campesena.status = 1;
+    await campesena.save();
+
+    await registerAction(
+      "COMPLEMENTARIAS",
+      {
+        event: "DESACTIVAR CAMPESINA",
+        data: campesena,
+      },
+      req.headers.token
+    );
+
+    res.json({ msg: "Campesena desactivada correctamente" });
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
 // ==================== RF-03: Solicitudes de complementarias ====================
 
-//register new complementary request
+//register new complementary request — instructor solo llena datos básicos, coordinador completa después
 compCtrl.registerRequest = async (req, res) => {
   const {
     catalogCourse,
     environment,
     formationDocument,
-    competencies,
-    outcomes,
-    learningActivity,
-    idCampesena,
-    rutaCampesena,
-    supervisorNombre,
-    ambienteNombre,
-    ambienteDireccion,
-    fechaInicio,
-    fechaFin,
-    fechaInscripcion,
-    fechaMatriculaInicio,
-    fechaMatriculaFin,
-    municipio,
-    vereda,
-    direccion,
-    nombreEmpresa,
-    nitEmpresa,
-    contactoEmpresa,
-    telefonoEmpresa,
+    prfDuracionMaxima,
     numAprendices,
     tipoPrograma,
     tipoPoblacion,
     requisitosIngreso,
     recursosNecesarios,
-    proyectoAsociado,
+    // REUNION2 Cambio 2: supervisor como ObjectId
+    supervisor,
+    // REUNION2 Cambio 3: campesena como ObjectId
+    campesena,
   } = req.body;
   try {
     const decoded = await webToken.decodeComplementariaToken(req.headers.token);
@@ -407,29 +509,55 @@ compCtrl.registerRequest = async (req, res) => {
       return res.status(400).json({ msg: "El curso del catálogo no existe" });
     }
 
+    // REUNION2 Cambio 2: denormalizar nombre del supervisor si viene como ObjectId
+    let supervisorNombre = "";
+    if (supervisor) {
+      const supervisorUser = await User.findById(supervisor);
+      if (supervisorUser) {
+        supervisorNombre = supervisorUser.name;
+      }
+    }
+
     const newRequest = new ComplementaryRequest({
       catalogCourse,
       catalogCourseName: catalog.prfDenominacion,
       catalogCourseCode: String(catalog.prfCodigo),
       catalogCourseVersion: String(catalog.prfVersion),
+      prfDuracionMaxima: catalog.prfDuracionMaxima || prfDuracionMaxima || 0,
       instructor: instructor._id,
       ...complementaryHelper.normalizeRequestFields(req.body),
+      // Sobreescribir supervisorNombre con el del usuario encontrado
+      supervisorNombre,
+      supervisor: supervisor || null,
+      // Campesena no lo ve el instructor — lo asigna el coordinador después
+      campesena: null,
       environment: environment || null,
       formationDocument: formationDocument || "",
-      competencies: competencies || [],
-      outcomes: outcomes || [],
-      fechaInicio: fechaInicio || null,
-      fechaFin: fechaFin || null,
-      fechaInscripcion: fechaInscripcion || null,
-      fechaMatriculaInicio: fechaMatriculaInicio || null,
-      fechaMatriculaFin: fechaMatriculaFin || null,
+      // REUNION2 Cambio 1: instructor ya no llena estos campos
+      competencies: [],
+      outcomes: [],
+      learningActivity: "",
+      sesiones: [],
+      // REUNION2 Cambio 2: supervisor ObjectId + denormalización
+      supervisor: supervisor || null,
+      supervisorNombre,
+      // REUNION2 Cambio 3: campesena ObjectId
+      campesena: campesena || null,
       numAprendices: numAprendices || 0,
+      // Proyecto asociado ya no lo llena el instructor — lo completa el coordinador en formation-data
+      proyectoAsociado: "",
     });
+
+    // Generar numeroSolicitud consecutivo
+    const count = await ComplementaryRequest.countDocuments();
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+    newRequest.numeroSolicitud = `${String(count + 1).padStart(7, "0")}-${dateStr}`;
 
     newRequest.history.push({
       previousState: "",
       newState: "PENDIENTE",
-      changedBy: decoded.email,
+      changedBy: decoded.id,
       changedByRole: decoded.rol,
       observations: "Solicitud creada",
     });
@@ -446,9 +574,20 @@ compCtrl.registerRequest = async (req, res) => {
     );
 
     const instructorName = instructor.name || decoded.email;
+    const coordinator = await complementaryHelper.findComplementaryCoordinator();
+    const programmers = await complementaryHelper.findComplementaryProgrammers();
     await notifyNewRequest(newRequest, instructorName);
 
-    res.json({ msg: "Solicitud registrada correctamente", data: newRequest });
+    res.json({
+      msg: "Solicitud registrada correctamente",
+      data: newRequest,
+      notified: {
+        coordinator: coordinator
+          ? { name: coordinator.name, email: coordinator.email }
+          : null,
+        programmers: programmers.map((p) => ({ name: p.name, email: p.email })),
+      },
+    });
   } catch (error) {
     console.log(error);
     res.status(400).json({ msg: "No fue posible terminar la operacion" });
@@ -456,13 +595,17 @@ compCtrl.registerRequest = async (req, res) => {
 };
 
 //get all requests (admin ve todo, instructor solo las suyas)
+// REUNION2 Cambio 12: filtros fichaNumber (regex), sortBy, sortOrder
 compCtrl.getRequests = async (req, res) => {
-  const { state, instructor } = req.query;
+  const { state, instructor, fichaNumber, sortBy, sortOrder } = req.query;
   try {
     const { isInstructor, ...decoded } = await webToken.decodeAnyToken(req.headers.token);
 
     const filter = { status: 0 };
     if (state) filter.state = state;
+    if (fichaNumber) {
+      filter.fichaNumber = { $regex: fichaNumber, $options: "i" };
+    }
 
     if (isInstructor || decoded.rol === "INSTRUCTOR") {
       const instructorDoc = await complementaryHelper.findInstructorByEmail(
@@ -476,11 +619,25 @@ compCtrl.getRequests = async (req, res) => {
       if (instructor) filter.instructor = instructor;
     }
 
+    // Whitelist de campos permitidos para ordenamiento (previene inyección NoSQL)
+    const allowedSortFields = [
+      "createdAt",
+      "updatedAt",
+      "fechaInicio",
+      "fechaFin",
+      "state",
+      "fichaNumber",
+      "numeroSolicitud",
+      "catalogCourseName",
+    ];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+
     const requests = await ComplementaryRequest.find(filter)
       .populate("catalogCourse", "prfDenominacion prfCodigo prfVersion")
       .populate("instructor", "name email numdocument")
       .populate("environment", "name")
-      .sort({ createdAt: -1 });
+      .sort({ [sortField]: sortDirection });
     res.json(requests);
   } catch (error) {
     res.status(400).json({ msg: "No fue posible terminar la operacion" });
@@ -627,7 +784,7 @@ compCtrl.resubmitRequest = async (req, res) => {
     request.history.push({
       previousState: "RECHAZADA",
       newState: "PENDIENTE",
-      changedBy: decoded.email,
+      changedBy: decoded.id,
       changedByRole: decoded.rol,
       observations: "Solicitud reenviada por el instructor",
     });
@@ -641,6 +798,11 @@ compCtrl.resubmitRequest = async (req, res) => {
       },
       req.headers.token
     );
+
+    const instructor = await complementaryHelper.findInstructorByEmail(decoded.email);
+    const instructorName = instructor?.name || decoded.email;
+    await notifyResubmit(request, instructorName);
+
     res.json({ msg: "Solicitud reenviada correctamente" });
   } catch (error) {
     console.log(error);
@@ -667,7 +829,7 @@ compCtrl.approveRequest = async (req, res) => {
     request.history.push({
       previousState: "PENDIENTE",
       newState: "APROBADA",
-      changedBy: decoded.email,
+      changedBy: decoded.id,
       changedByRole: decoded.rol,
       observations: "Solicitud aprobada",
     });
@@ -721,7 +883,7 @@ compCtrl.rejectRequest = async (req, res) => {
     request.history.push({
       previousState: "PENDIENTE",
       newState: "RECHAZADA",
-      changedBy: decoded.email,
+      changedBy: decoded.id,
       changedByRole: decoded.rol,
       observations: observations.toUpperCase().trim(),
     });
@@ -752,18 +914,28 @@ compCtrl.rejectRequest = async (req, res) => {
 
 // ==================== RF-05: Asignación de ficha y gestión de estados ====================
 
+//get all coordinators for supervisor dropdown — cualquier token válido
+compCtrl.getCoordinators = async (req, res) => {
+  try {
+    const coordinators = await complementaryHelper.findAllCoordinators();
+    res.json(coordinators);
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
 //assign ficha number to approved request — APROBADA → FICHA_ASIGNADA (solo ADMIN)
+//Ahora también asigna las fechas del programa (antes las llenaba el instructor)
 compCtrl.assignFicha = async (req, res) => {
   const { id } = req.params;
   const {
-    fichaNumber,
+    fichaCaracterizacion,
     fechaInicio,
     fechaFin,
     fechaInscripcion,
     fechaMatriculaInicio,
     fechaMatriculaFin,
-    codigoSolicitud,
-    fichaCaracterizacion,
   } = req.body;
   try {
     const decoded = webToken.decodeToken(req.headers.token);
@@ -775,21 +947,20 @@ compCtrl.assignFicha = async (req, res) => {
         .json({ msg: "La solicitud no existe o no está en estado APROBADA" });
     }
 
-    request.fichaNumber = fichaNumber.toUpperCase().trim();
-    request.fechaInicio = fechaInicio;
-    request.fechaFin = fechaFin;
-    request.fechaInscripcion = fechaInscripcion;
-    request.fechaMatriculaInicio = fechaMatriculaInicio;
-    request.fechaMatriculaFin = fechaMatriculaFin;
-    request.codigoSolicitud = (codigoSolicitud || "").toUpperCase().trim();
     request.fichaCaracterizacion = (fichaCaracterizacion || "").toUpperCase().trim();
+    // REUNION2 Cambio 6: fechas se asignan al asignar ficha (antes las enviaba el instructor)
+    request.fechaInicio = fechaInicio || null;
+    request.fechaFin = fechaFin || null;
+    request.fechaInscripcion = fechaInscripcion || null;
+    request.fechaMatriculaInicio = fechaMatriculaInicio || null;
+    request.fechaMatriculaFin = fechaMatriculaFin || null;
     request.state = "FICHA_ASIGNADA";
     request.history.push({
       previousState: "APROBADA",
       newState: "FICHA_ASIGNADA",
-      changedBy: decoded.email,
+      changedBy: decoded.id,
       changedByRole: decoded.rol,
-      observations: `Ficha ${fichaNumber} asignada`,
+      observations: `Ficha asignada — ${request.numeroSolicitud}`,
     });
     await request.save();
 
@@ -799,9 +970,12 @@ compCtrl.assignFicha = async (req, res) => {
         event: "ASIGNAR FICHA",
         data: {
           id: request._id,
-          fichaNumber: request.fichaNumber,
+          numeroSolicitud: request.numeroSolicitud,
+          fichaCaracterizacion: request.fichaCaracterizacion,
           catalogCourseName: request.catalogCourseName,
           assignedBy: decoded.email,
+          fechaInicio,
+          fechaFin,
         },
       },
       req.headers.token
@@ -810,6 +984,106 @@ compCtrl.assignFicha = async (req, res) => {
     await notifyFichaAssigned(request);
 
     res.json({ msg: "Ficha asignada correctamente", data: request });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+// ==================== Coordinador completa datos de formación post-aprobación ====================
+
+//coordinador agrega competencias, resultados, sesiones — marca formationDataCompleted = true
+compCtrl.addFormationData = async (req, res) => {
+  const { id } = req.params;
+  const {
+    competencies,
+    outcomes,
+    learningActivity,
+    sesiones,
+    proyectoAsociado,
+    campesena,
+  } = req.body;
+  try {
+    const decoded = webToken.decodeToken(req.headers.token);
+
+    const request = await ComplementaryRequest.findById(id);
+    if (!request) {
+      return res.status(400).json({ msg: "La solicitud no existe" });
+    }
+
+    // Verificar que se pueden agregar datos de formación
+    if (request.state !== "APROBADA" && request.state !== "FICHA_ASIGNADA") {
+      return res.status(400).json({
+        msg: "La solicitud debe estar en estado APROBADA o FICHA_ASIGNADA para agregar datos de formación",
+      });
+    }
+
+    if (request.formationDataCompleted) {
+      return res.status(400).json({
+        msg: "Los datos de formación ya fueron completados para esta solicitud",
+      });
+    }
+
+    // Guardar datos de formación
+    request.competencies = competencies.map((c) => c.toUpperCase().trim());
+    request.outcomes = outcomes.map((o) => o.toUpperCase().trim());
+    request.learningActivity = (learningActivity || "").toUpperCase().trim();
+    request.proyectoAsociado = (proyectoAsociado || "").toUpperCase().trim();
+
+    // Sesiones con campos expandidos (competencia + resultados por sesión)
+    if (sesiones && sesiones.length > 0) {
+      request.sesiones = sesiones.map((s) => ({
+        fecha: s.fecha || "",
+        horaInicio: s.horaInicio || "",
+        horaFin: s.horaFin || "",
+        totalHoras: s.totalHoras || 0,
+        competencia: (s.competencia || "").toUpperCase().trim(),
+        resultados: (s.resultados || []).map((r) => r.toUpperCase().trim()),
+        actividadAprendizaje: (s.actividadAprendizaje || "").toUpperCase().trim(),
+      }));
+    }
+
+    // Asignar campesena si viene (coordinador la selecciona)
+    if (campesena) {
+      const CampesenaModel = (await import("../models/ComplementaryCampesena.js")).default;
+      const campesenaDoc = await CampesenaModel.findOne({ _id: campesena, status: 0 });
+      if (!campesenaDoc) {
+        return res.status(400).json({ msg: "La opción de campesena seleccionada no existe" });
+      }
+      request.campesena = campesena;
+    }
+
+    request.formationDataCompleted = true;
+    request.history.push({
+      previousState: request.state,
+      newState: request.state,
+      changedBy: decoded.id,
+      changedByRole: decoded.rol,
+      observations: "Datos de formación completados por coordinador",
+    });
+    await request.save();
+
+    await registerAction(
+      "COMPLEMENTARIAS",
+      {
+        event: "COMPLETAR DATOS DE FORMACIÓN",
+        data: {
+          id: request._id,
+          numeroSolicitud: request.numeroSolicitud,
+          catalogCourseName: request.catalogCourseName,
+          competencias: competencies.length,
+          resultados: outcomes.length,
+          sesiones: sesiones ? sesiones.length : 0,
+          completedBy: decoded.email,
+        },
+      },
+      req.headers.token
+    );
+
+    res.json({
+      msg: "Datos de formación guardados correctamente",
+      data: request,
+    });
   } catch (error) {
     console.log(error);
     res.status(400).json({ msg: "No fue posible terminar la operacion" });
@@ -833,7 +1107,7 @@ compCtrl.changeState = async (req, res) => {
     request.history.push({
       previousState,
       newState,
-      changedBy: decoded.email,
+      changedBy: decoded.id,
       changedByRole: decoded.rol,
       observations: observations ? observations.toUpperCase().trim() : `Estado cambiado a ${newState}`,
     });
@@ -848,14 +1122,74 @@ compCtrl.changeState = async (req, res) => {
           fichaNumber: request.fichaNumber,
           previousState,
           newState,
-          changedBy: decoded.email,
+          changedBy: decoded.id,
           observations: observations || "",
         },
       },
       req.headers.token
     );
 
+    // Enviar notificación por correo si la solicitud fue cancelada
+    if (newState === "CANCELADA") {
+      await notifyCancellation(request, previousState, observations || "");
+    }
+
     res.json({ msg: "Estado actualizado correctamente", data: request });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+// REUNION2 Cambio 4: coordinador completa datos de formación (competencias, resultados, sesiones)
+compCtrl.addFormationData = async (req, res) => {
+  const { id } = req.params;
+  const { competencies, outcomes, learningActivity, sesiones } = req.body;
+  try {
+    const decoded = webToken.decodeToken(req.headers.token);
+
+    const request = await ComplementaryRequest.findById(id);
+    if (!request) {
+      return res.status(400).json({ msg: "La solicitud no existe" });
+    }
+
+    // Normalizar campos de texto
+    request.competencies = (competencies || []).map((c) => c.toUpperCase().trim());
+    request.outcomes = (outcomes || []).map((o) => o.toUpperCase().trim());
+    request.learningActivity = (learningActivity || "").toUpperCase().trim();
+    request.sesiones = (sesiones || []).map((s) => ({
+      ...s,
+      competencia: (s.competencia || "").toUpperCase().trim(),
+      resultados: (s.resultados || []).map((r) => r.toUpperCase().trim()),
+      actividadAprendizaje: (s.actividadAprendizaje || "").toUpperCase().trim(),
+    }));
+    request.formationDataCompleted = true;
+
+    // Registrar en history
+    request.history.push({
+      previousState: request.state,
+      newState: request.state,
+      changedBy: decoded.id,
+      changedByRole: decoded.rol,
+      observations: "Datos de formación completados por el coordinador",
+    });
+
+    await request.save();
+
+    await registerAction(
+      "COMPLEMENTARIAS",
+      {
+        event: "COMPLETAR DATOS DE FORMACIÓN",
+        data: {
+          requestId: request._id,
+          fichaNumber: request.fichaNumber,
+          completedBy: decoded.email,
+        },
+      },
+      req.headers.token
+    );
+
+    res.json({ msg: "Datos de formación completados correctamente", data: request });
   } catch (error) {
     console.log(error);
     res.status(400).json({ msg: "No fue posible terminar la operacion" });
@@ -907,7 +1241,7 @@ compCtrl.closeFicha = async (req, res) => {
     request.history.push({
       previousState,
       newState: "CERRADA",
-      changedBy: decoded.email,
+      changedBy: decoded.id,
       changedByRole: decoded.rol,
       observations: "Ficha complementaria cerrada — todos los resultados evaluados",
     });
@@ -956,6 +1290,23 @@ compCtrl.scheduleComplementary = async (req, res) => {
   } = req.body;
   try {
     const decoded = webToken.decodeToken(req.headers.token);
+    const isCoordinador = decoded.rol === "COORDINADOR";
+
+    // REUNION2 Cambio 9: fstart/fend opcionales para COORDINADOR, obligatorios para ADMIN/PROGRAMADOR
+    if (!fstart || !fend) {
+      if (isCoordinador) {
+        // Coordinador: derivar fechas del array de events
+        if (!events || !Array.isArray(events) || events.length === 0) {
+          return res.status(400).json({
+            msg: "No se proporcionaron fechas de inicio/fin y no hay eventos para derivarlas",
+          });
+        }
+      } else {
+        return res.status(400).json({
+          msg: "Las fechas de inicio y fin son obligatorias",
+        });
+      }
+    }
 
     // 1. Validar que la solicitud sea programable
     const request = await complementaryScheduleHelper.validateRequestProgrammable(id);
@@ -963,23 +1314,44 @@ compCtrl.scheduleComplementary = async (req, res) => {
     // 2. Validar que no exista ya un schedule activo para esta solicitud
     await complementaryScheduleHelper.validateNoDuplicateSchedule(id);
 
+    // Calcular eventDates del instructor (necesario para derivar fstart/fend y para horas)
+    const eventDates = events
+      .filter((e) => e.idInstructor === instructor && e.autogenerated)
+      .map((e) => e.start)
+      .filter(Boolean);
+
+    // Resolver fstart/fend: prioridad eventDates > body > error
+    let resolvedFstart = fstart;
+    let resolvedFend = fend;
+    if (eventDates.length > 0) {
+      const sortedDates = [...eventDates].sort((a, b) => new Date(a) - new Date(b));
+      resolvedFstart = sortedDates[0];
+      resolvedFend = sortedDates[sortedDates.length - 1];
+    } else if (isCoordinador) {
+      // Coordinador sin eventDates del instructor: usar todos los events
+      const allDates = events.map((e) => e.start).filter(Boolean).sort((a, b) => new Date(a) - new Date(b));
+      if (allDates.length === 0) {
+        return res.status(400).json({
+          msg: "No hay eventos válidos para derivar las fechas de inicio y fin",
+        });
+      }
+      resolvedFstart = allDates[0];
+      resolvedFend = allDates[allDates.length - 1];
+    }
+
     // 3. Validar disponibilidad del instructor contra TODA la colección Schedule
     await complementaryScheduleHelper.validateInstructorAvailability(
-      instructor, fstart, fend, tstart, tend, days
+      instructor, resolvedFstart, resolvedFend, tstart, tend, days
     );
 
     // 4. Validar disponibilidad del ambiente (si viene) contra TODA la colección Schedule
     if (environment) {
       await complementaryScheduleHelper.validateEnvironmentAvailability(
-        environment, fstart, fend, tstart, tend, days
+        environment, resolvedFstart, resolvedFend, tstart, tend, days
       );
     }
 
     // 5. Calcular horas de trabajo
-    const eventDates = events
-      .filter((e) => e.idInstructor === instructor && e.autogenerated)
-      .map((e) => e.start)
-      .filter(Boolean);
     const hourswork = calculateNumHoursWork(tstart, tend, eventDates.length);
 
     // 6. Validar límite de horas del curso
@@ -1004,8 +1376,8 @@ compCtrl.scheduleComplementary = async (req, res) => {
       observation: (observation || "PROGRAMADO DESDE EL MÓDULO DE COMPLEMENTARIAS").toUpperCase().trim(),
       environment: environment || undefined,
       days,
-      fstart: eventDates.length > 0 ? new Date(eventDates[0]) : new Date(fstart),
-      fend: eventDates.length > 0 ? new Date(eventDates[eventDates.length - 1]) : new Date(fend),
+      fstart: new Date(resolvedFstart),
+      fend: new Date(resolvedFend),
       tstart,
       tend,
       hourswork,
@@ -1030,12 +1402,15 @@ compCtrl.scheduleComplementary = async (req, res) => {
       request.history.push({
         previousState,
         newState: "PROGRAMADA",
-        changedBy: decoded.email,
+        changedBy: decoded.id,
         changedByRole: decoded.rol,
         observations: "Estado avanzado automáticamente al programar horario",
       });
       await request.save();
     }
+
+    // 11. Notificar al instructor por correo
+    await notifyScheduled(request, newSchedule);
 
     await registerAction(
       "COMPLEMENTARIAS",
@@ -1064,7 +1439,8 @@ compCtrl.scheduleComplementary = async (req, res) => {
       error.message.includes("ambiente") ||
       error.message.includes("solicitud") ||
       error.message.includes("horas") ||
-      error.message.includes("programa")
+      error.message.includes("programa") ||
+      error.message.includes("formación")
     ) {
       return res.status(400).json({ msg: error.message });
     }
@@ -1303,7 +1679,7 @@ compCtrl.rescheduleFicha = async (req, res) => {
           history: {
             previousState: "PROGRAMADA",
             newState: "PROGRAMADA",
-            changedBy: decoded.email,
+            changedBy: decoded.id,
             changedByRole: decoded.rol,
             observations: `Ficha reprogramada. Nuevo rango: ${new Date(fstart).toLocaleDateString("es-CO")} - ${new Date(fend).toLocaleDateString("es-CO")}`,
           },
@@ -1323,6 +1699,67 @@ compCtrl.rescheduleFicha = async (req, res) => {
     res.json({ msg: "Horario reprogramado correctamente", data: schedule });
   } catch (error) {
     console.log(error);
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+// ==================== CRUD CampeSENA ====================
+
+compCtrl.getCampesenas = async (req, res) => {
+  try {
+    const campesenas = await ComplementaryCampesena.find({ status: 0 }).sort({ nombre: 1 });
+    res.json(campesenas);
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+compCtrl.getCampesenaById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const campesena = await ComplementaryCampesena.findById(id);
+    res.json(campesena);
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+compCtrl.registerCampesena = async (req, res) => {
+  const { nombre } = req.body;
+  try {
+    const newCampesena = new ComplementaryCampesena({ nombre: nombre.toUpperCase().trim() });
+    await newCampesena.save();
+    res.json({ msg: "Registro creado correctamente", data: newCampesena });
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+compCtrl.updateCampesena = async (req, res) => {
+  const { id } = req.params;
+  const { nombre } = req.body;
+  try {
+    const campesena = await ComplementaryCampesena.findByIdAndUpdate(
+      id,
+      { nombre: nombre.toUpperCase().trim() },
+      { new: true }
+    );
+    res.json({ msg: "Registro actualizado correctamente", data: campesena });
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
+compCtrl.deactivateCampesena = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const campesena = await ComplementaryCampesena.findByIdAndUpdate(
+      id,
+      { status: 1 },
+      { new: true }
+    );
+    res.json({ msg: "Registro desactivado correctamente", data: campesena });
+  } catch (error) {
     res.status(400).json({ msg: "No fue posible terminar la operacion" });
   }
 };

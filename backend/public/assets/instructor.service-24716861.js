@@ -1,0 +1,1 @@
+import{g as t}from"./api-5a4e804b.js";const c={getInstructors:()=>t("/instructors"),checkAvailability:(r,i,s,o)=>t(`/instructors/${r}/availability`,{dates:i.join(","),shift:s,currentFiche:o})};export{c as I};

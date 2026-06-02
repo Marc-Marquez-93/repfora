@@ -353,6 +353,9 @@ instrCtrl.checkInstructorAvailability = async (req, res) => {
     if (shift === 'nocturna' || shift === 'night') {
       reqStart = '18:00';
       reqEnd = '22:00';
+    } else if (shift === 'mixta_manana') {
+      reqStart = '07:00';
+      reqEnd = '12:00';
     }
 
     // Query active schedules for the instructor
@@ -370,7 +373,14 @@ instrCtrl.checkInstructorAvailability = async (req, res) => {
       }
 
       // Check time overlap: schedule.tstart < reqEnd && schedule.tend > reqStart
-      const timeOverlaps = schedule.tstart < reqEnd && schedule.tend > reqStart;
+      let timeOverlaps = false;
+      if (shift === 'mixta_manana_tarde') {
+        const overlap1 = schedule.tstart < '12:00' && schedule.tend > '07:00';
+        const overlap2 = schedule.tstart < '17:59' && schedule.tend > '13:00';
+        timeOverlaps = overlap1 || overlap2;
+      } else {
+        timeOverlaps = schedule.tstart < reqEnd && schedule.tend > reqStart;
+      }
       if (!timeOverlaps) {
         continue;
       }

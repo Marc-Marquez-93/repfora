@@ -21,6 +21,11 @@ const {
   validateReportQuery,
   validateReschedule,
   validateUploadStatus,
+  validateFormationData,
+  validateRegisterCampesena,
+  validateUpdateCampesena,
+  validateDeleteCampesena,
+  validateExistCampesena,
 } = complementaryVali;
 
 const {
@@ -48,6 +53,13 @@ const {
   getFichasPorEstado,
   getHorasPorMes,
   rescheduleFicha,
+  getCoordinators,
+  addFormationData,
+  getCampesenas,
+  getCampesenaById,
+  registerCampesena,
+  updateCampesena,
+  deactivateCampesena,
 } = compCtrl;
 
 const routerComplementary = Router();
@@ -239,6 +251,145 @@ routerComplementary.get("/catalog/upload-status/:jobId", validateUploadStatus, g
 
 routerComplementary.get("/coordinator", validateHeaders, getComplementaryCoordinator);
 
+/**
+ * @swagger
+ * /api/complementary/coordinators:
+ *   get:
+ *     summary: Obtiene todos los coordinadores activos (para desplegable de supervisor)
+ *     tags: [Complementarias]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de coordinadores activos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ */
+routerComplementary.get("/coordinators", validateHeaders, getCoordinators);
+
+// ==================== REUNION2 Cambio 3: CRUD campesena ====================
+
+/**
+ * @swagger
+ * /api/complementary/campesenas:
+ *   get:
+ *     summary: Lista todas las campesenas activas
+ *     tags: [Complementarias]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de campesenas activas
+ */
+routerComplementary.get("/campesenas", validateHeaders, getCampesenas);
+
+/**
+ * @swagger
+ * /api/complementary/campesenas/{id}:
+ *   get:
+ *     summary: Obtiene una campesena por ID
+ *     tags: [Complementarias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Detalle de la campesena
+ */
+routerComplementary.get("/campesenas/:id", validateExistCampesena, getCampesenaById);
+
+/**
+ * @swagger
+ * /api/complementary/campesenas:
+ *   post:
+ *     summary: Crea una nueva campesena (solo COORDINADOR)
+ *     tags: [Complementarias]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nombre
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Campesena registrada correctamente
+ */
+routerComplementary.post("/campesenas", validateRegisterCampesena, registerCampesena);
+
+/**
+ * @swagger
+ * /api/complementary/campesenas/{id}:
+ *   put:
+ *     summary: Edita una campesena existente (solo COORDINADOR)
+ *     tags: [Complementarias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nombre
+ *             properties:
+ *               nombre:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Campesena actualizada correctamente
+ */
+routerComplementary.put("/campesenas/:id", validateUpdateCampesena, updateCampesena);
+
+/**
+ * @swagger
+ * /api/complementary/campesenas/{id}/deactivate:
+ *   put:
+ *     summary: Desactiva una campesena (solo COORDINADOR)
+ *     tags: [Complementarias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Campesena desactivada correctamente
+ */
+routerComplementary.put("/campesenas/:id/deactivate", validateDeleteCampesena, deactivateCampesena);
+
 // ==================== RF-03: Solicitudes de complementarias ====================
 
 /**
@@ -351,6 +502,25 @@ routerComplementary.post("/requests/register", validateRegisterRequest, register
  *         schema:
  *           type: string
  *         description: Filtrar por ID de instructor
+ *       - in: query
+ *         name: fichaNumber
+ *         schema:
+ *           type: string
+ *         description: "Búsqueda parcial por número de ficha (regex, case-insensitive)"
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, updatedAt, fechaInicio, fechaFin, state, fichaNumber, numeroSolicitud, catalogCourseName]
+ *           default: createdAt
+ *         description: Campo para ordenar los resultados
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Dirección de ordenamiento
  *     responses:
  *       200:
  *         description: Lista de solicitudes
@@ -501,6 +671,10 @@ routerComplementary.put("/approvals/:id/approve", validateApprove, approveReques
  */
 routerComplementary.put("/approvals/:id/reject", validateReject, rejectRequest);
 
+// ==================== RF-04 extendido: Datos de formación ====================
+
+routerComplementary.put("/requests/:id/formation-data", validateFormationData, addFormationData);
+
 // ==================== RF-05: Asignación de ficha y gestión de estados ====================
 
 /**
@@ -606,6 +780,71 @@ routerComplementary.put("/requests/:id/assign-ficha", validateAssignFicha, assig
  *         description: Sin permisos
  */
 routerComplementary.put("/requests/:id/state", validateChangeState, changeState);
+
+/**
+ * @swagger
+ * /api/complementary/requests/{id}/formation-data:
+ *   put:
+ *     summary: Completa los datos de formación de una solicitud (competencias, resultados, sesiones)
+ *     description: Solo COORDINADOR o ADMIN pueden completar los datos. La solicitud debe estar en estado APROBADA o FICHA_ASIGNADA y formationDataCompleted debe ser false.
+ *     tags: [Complementarias]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - competencies
+ *               - outcomes
+ *               - sesiones
+ *             properties:
+ *               competencies:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               outcomes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               learningActivity:
+ *                 type: string
+ *               sesiones:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     fecha:
+ *                       type: string
+ *                     horaInicio:
+ *                       type: string
+ *                     horaFin:
+ *                       type: string
+ *                     totalHoras:
+ *                       type: number
+ *                     competencia:
+ *                       type: string
+ *                     resultados:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     actividadAprendizaje:
+ *                       type: string
+ *     responses:
+ *       200:
+ *         description: Datos de formación completados correctamente
+ *       400:
+ *         description: Error de validación
+ */
+routerComplementary.put("/requests/:id/formation-data", validateFormationData, addFormationData);
 
 // ==================== RF-12: Cierre de ficha complementaria ====================
 
@@ -866,5 +1105,13 @@ routerComplementary.get("/reports/horas-por-mes", validateReportQuery, getHorasP
  *         description: Error de validacion
  */
 routerComplementary.put("/schedule/:id/reschedule", validateReschedule, rescheduleFicha);
+
+// ==================== CRUD Campesena ====================
+
+routerComplementary.get("/campesenas", validateHeaders, getCampesenas);
+routerComplementary.get("/campesenas/:id", validateExistCampesena, getCampesenaById);
+routerComplementary.post("/campesenas", validateRegisterCampesena, registerCampesena);
+routerComplementary.put("/campesenas/:id", validateUpdateCampesena, updateCampesena);
+routerComplementary.put("/campesenas/:id/deactivate", validateDeleteCampesena, deactivateCampesena);
 
 export { routerComplementary };

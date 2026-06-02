@@ -8,6 +8,11 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+graphify-out/*
+!graphify-out/GRAPH_REPORT.md
+.agents
+.claude
+skills-lock.json
 dist
 dist-ssr
 *.local
@@ -28,6 +33,3 @@ dist-ssr
 /test-results/
 /playwright-report/
 /playwright/.cache/
-
-# Claude Code
-.claude/

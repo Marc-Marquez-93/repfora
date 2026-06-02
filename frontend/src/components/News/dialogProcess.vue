@@ -280,8 +280,11 @@ const props = defineProps({
   },
 });
 
+<<<<<<< HEAD
 console.log(props.idNew);
 console.log(props.showDialogProcess);
+=======
+>>>>>>> sena-oficial/frontend
 
 let statusOptions = ref([
   "REGISTRADA",
@@ -317,7 +320,10 @@ function getInfo() {
     if (res) {
       infoNew.value = res;
       tpnew.value = res.tpnew;
+<<<<<<< HEAD
       console.log(tpnew.value);
+=======
+>>>>>>> sena-oficial/frontend
       dataBaseNew.value = [
         {
           name: "Tipo de Novedad",
@@ -403,7 +409,10 @@ function getDateFormat() {
 }
 
 function addInputAnswer() {
+<<<<<<< HEAD
   console.log(answers.value);
+=======
+>>>>>>> sena-oficial/frontend
   if (answers.value[0]?.data == "" ) return;
   answers.value.unshift({
     data: "",
@@ -453,6 +462,7 @@ async function updateAdvencedNew() {
 }
 
 async function saveInfo() {
+<<<<<<< HEAD
   await put(`/news/updateadvanced/${props.idNew}`, {
       answers: answers.value,
       numberact: acta.value,
@@ -468,6 +478,25 @@ async function saveInfo() {
     });
 
   loading.value = false;
+=======
+  try {
+    await put(`/news/updateadvanced/${props.idNew}`, {
+        answers: answers.value,
+        numberact: acta.value,
+        datesofia: fSopia.value,
+        state: statusSelected.value,
+        processed: aproved.value,
+      })
+      .then((res) => {
+        if (res) {
+          notifySuccessRequest("Novedad actualizada correctamente");
+          props.showDialogProcess();
+        }
+      });
+  } finally {
+    loading.value = false;
+  }
+>>>>>>> sena-oficial/frontend
 }
 </script>
     

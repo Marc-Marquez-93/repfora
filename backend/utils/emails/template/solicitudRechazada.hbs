@@ -9,7 +9,6 @@
       .detail-value { width: 60%; }
       .observations { background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin: 16px 0; border-radius: 4px; }
       .footer { padding: 15px 20px; background-color: #fbe9e7; font-size: 12px; color: #666; border-radius: 0 0 8px 8px; text-align: center; }
-      .action-link { display: inline-block; background-color: #1565c0; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 12px; }
     </style>
   </head>
   <body>
@@ -21,6 +20,10 @@
         <p>Cordial saludo, <strong>{{instructorName}}</strong></p>
         <p>Le informamos que su solicitud de formacion complementaria ha sido <strong>rechazada</strong>.</p>
         <h3>Detalles de la solicitud:</h3>
+        <div class="detail-row">
+          <span class="detail-label">Numero de solicitud:</span>
+          <span class="detail-value">{{numeroSolicitud}}</span>
+        </div>
         <div class="detail-row">
           <span class="detail-label">Curso:</span>
           <span class="detail-value">{{courseName}}</span>

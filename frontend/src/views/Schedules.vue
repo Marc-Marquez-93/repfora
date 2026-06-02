@@ -248,7 +248,6 @@ onBeforeMount(async () => {
 const getFiches = async () => {
   isLoadingFiche.value = true;
   const res = await get("/fiches?status=0");
-  console.log(res);
   res.forEach((row, index) => {
     optionsFiches.value.push({
       label: `${row.number} ${row.program.name}`,

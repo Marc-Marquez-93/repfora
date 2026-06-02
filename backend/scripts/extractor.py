@@ -4,254 +4,296 @@ import requests
 import re
 import os
 import sys
+import unicodedata
+import traceback
 
+# Configuración de codificación para Windows
 if sys.stdout.encoding != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except AttributeError:
+        import codecs
+        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+
+# Configuración de log interno
+DEBUG_LOG = "extractor_debug.log"
+with open(DEBUG_LOG, "w") as f: f.write("--- INICIO DE EXTRACCION ---\n")
+
+def log_debug(msg):
+    print(msg)
+    with open(DEBUG_LOG, "a", encoding="utf-8") as f:
+        f.write(str(msg) + "\n")
+
+def clean_cid_and_spacing(text):
+    if not text: return ""
+    text = re.sub(r'\(cid:\d+\)', ' ', text)
+    text = re.sub(r'\d{2}/\d{2}/\d{2,4}.*?Página \d+ de \d+', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'GFPI- F-\d+ v\d+', '', text, flags=re.IGNORECASE)
+    text = "".join(c for c in text if c.isprintable() or c in "\n\r\t")
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+def normalize_text(text):
+    if not text: return ""
+    text = clean_cid_and_spacing(text)
+    text = unicodedata.normalize('NFD', text)
+    text = "".join([c for c in text if unicodedata.category(c) != 'Mn'])
+    return text.upper().strip()
+
+def ultra_normalize(text):
+    if not text: return ""
+    text = normalize_text(text)
+    return re.sub(r'[^A-Z0-9]', '', text)
+
+def normalize_date(date_str):
+    """ Convierte fechas tipo '10 de Febrero 2025' o '10/02/2025' a ISO (YYYY-MM-DD) para MongoDB """
+    if not date_str: return None
+    months = {
+        'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04', 'mayo': '05', 'junio': '06',
+        'julio': '07', 'agosto': '08', 'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'
+    }
+    try:
+        d = date_str.lower().replace(' de ', ' ').replace('/', ' ').replace('-', ' ')
+        parts = d.split()
+        if len(parts) < 3: return None
+        day = parts[0].zfill(2)
+        month = parts[1]
+        year = parts[2]
+        if month in months: month = months[month]
+        else: month = month.zfill(2)
+        if len(year) == 2: year = "20" + year
+        return f"{year}-{month}-{day}"
+    except: return None
 
 class SenaExtractor:
-    def __init__(self, program_pdf, project_pdf, fiche="000000"):
+    def __init__(self, program_pdf, project_pdf, team_pdf=None, fiche="000000"):
         self.program_pdf = program_pdf
         self.project_pdf = project_pdf
-        self.fiche = fiche
+        self.team_pdf = team_pdf
+        self.fiche = str(fiche).strip()
+        if self.fiche in ["000000", "", "EXTRACTED", "undefined", "null"]:
+            self._auto_detect_fiche()
         
-        # Intentar extraer el Código Proyecto SOFIA si la ficha es temporal o genérica
-        if self.fiche == "000000" or self.fiche.startswith("EXTRACTED_") or self.fiche == "":
-            try:
-                with pdfplumber.open(self.project_pdf) as pdf:
-                    for page in pdf.pages[:3]: # Buscar en las primeras 3 páginas
-                        text = page.extract_text()
-                        if text:
-                            # Buscar "Código Proyecto SOFIA:" o similar seguido de un número
-                            match = re.search(r'C[óo]digo\s+Proyecto\s+SOFIA\s*:\s*(\d+)', text, re.IGNORECASE)
-                            if match:
-                                self.fiche = match.group(1).strip()
-                                print(f"[INFO] Ficha detectada automaticamente de Codigo Proyecto SOFIA: {self.fiche}")
-                                break
-                            match_var = re.search(r'C[óo]digo\s+(?:del\s+)?Proyecto\s*:\s*(\d+)', text, re.IGNORECASE)
-                            if match_var:
-                                self.fiche = match_var.group(1).strip()
-                                print(f"[INFO] Ficha detectada automaticamente de Codigo Proyecto: {self.fiche}")
-                                break
-            except Exception as e:
-                print(f"[WARN] Error al auto-detectar ficha del PDF: {e}")
+        log_debug(f"[INIT] Usando Ficha: {self.fiche}")
+        self.unique_raps_codes = set()
+        self.global_rap_registry = set()
+        self.data = {"pedagogicalPlanning": {"metadata": {"programName": "", "programCode": "", "totalHours": 0, "lectivaHours": 0, "productivaHours": 0, "teamPdfProcessed": False}, "fiche": self.fiche, "status": "draft", "content": []}}
+        
+        self.competencies_data = {} 
+        self.instructor_map = {}   
+        self.temp_content = {}
+        self.phase_activities = {}
 
-        self.processed_raps = set()
-        
-        self.data = {
-            "pedagogicalPlanning": {
-                "metadata": {"totalHours": 0, "lectivaHours": 0, "productivaHours": 0},
-                "fiche": self.fiche, 
-                "status": "draft",
-                "content": []
-            }
-        }
-        self.competencies_data = {}
+    def _auto_detect_fiche(self):
+        try:
+            with pdfplumber.open(self.project_pdf) as pdf:
+                for page in pdf.pages[:3]:
+                    text = page.extract_text()
+                    if text:
+                        match = re.search(r'C[oó]digo\s+Proyecto\s+SOFIA\s*:\s*(\d+)', text, re.IGNORECASE)
+                        if match: self.fiche = match.group(1).strip(); return
+        except: pass
 
     def extract_program_details(self):
-        print(f"[STEP 1] Analizando Programa...")
-        with pdfplumber.open(self.program_pdf) as pdf:
-            all_text = "\n".join([p.extract_text() or "" for p in pdf.pages[:10]])
-            
-            # Metadata básica
-            self.data["pedagogicalPlanning"]["metadata"]["programName"] = self._regex_find(r'Denominación\s*del Programa:\s*(.*)', all_text, "PROGRAMA DE FORMACION")
-            self.data["pedagogicalPlanning"]["metadata"]["programCode"] = self._regex_find(r'Código\s*Programa:\s*(\d+)', all_text, "000000")
-            
-            lectiva = self._regex_find(r'Etapa\s*Lectiva:\s*(\d+)', all_text, "0")
-            productiva = self._regex_find(r'Etapa\s*Productiva:\s*(\d+)', all_text, "0")
-            self.data["pedagogicalPlanning"]["metadata"]["lectivaHours"] = int(lectiva)
-            self.data["pedagogicalPlanning"]["metadata"]["productivaHours"] = int(productiva)
-            self.data["pedagogicalPlanning"]["metadata"]["totalHours"] = int(lectiva) + int(productiva)
-
-            current_comp = None
-            for page in pdf.pages[1:]:
-                text = page.extract_text()
-                if not text: continue
+        """ PDF 1: DICCIONARIO DE DATOS (REFORZADO) """
+        log_debug(f"[STEP 1] Analizando Programa (PDF 1)...")
+        try:
+            with pdfplumber.open(self.program_pdf) as pdf:
+                all_text = ""
+                for page in pdf.pages: all_text += (page.extract_text() or "") + "\n---PAGE---\n"
                 
-                # Detectar Competencia
-                comp_match = re.search(r'(\d{9})\b', text)
-                if comp_match:
-                    c_code = comp_match.group(1)
-                    current_comp = c_code
-                    if current_comp not in self.competencies_data:
-                        self.competencies_data[current_comp] = {
-                            "name": f"Competencia {current_comp}",
-                            "hours": 0, "concepts": [], "processes": [], "criteria": []
-                        }
-                        # Buscar horas cerca del código
-                        h_match = re.search(r'(\d+)\s*Horas', text[text.find(c_code):text.find(c_code)+200], re.IGNORECASE)
-                        if h_match: self.competencies_data[current_comp]["hours"] = int(h_match.group(1))
-
-                if not current_comp: continue
+                all_text_clean = re.sub(r'\(cid:\d+\)', ' ', all_text)
+                self.data["pedagogicalPlanning"]["metadata"]["programName"] = self._regex_find(r'Denominaci[oó]n\s*del Programa:\s*(.*)', all_text_clean, "PROGRAMA")
+                self.data["pedagogicalPlanning"]["metadata"]["programCode"] = self._regex_find(r'C[oó]digo\s*Programa:\s*(\d+)', all_text_clean, "000000")
                 
-                t_up = text.upper()
-                # Búsqueda más flexible de conocimientos
-                if "CONOCIMIENTOS" in t_up and ("SABER" in t_up or "CONCEPTO" in t_up):
-                    try:
-                        # Intentar capturar Conceptos/Saber
-                        if "CONCEPTO" in t_up or "SABER" in t_up:
-                            start_marker = "CONOCIMIENTOS DE CONCEPTO" if "CONOCIMIENTOS DE CONCEPTO" in t_up else "CONOCIMIENTOS DEL SABER"
-                            end_marker = "CONOCIMIENTOS DE PROCESO" if "CONOCIMIENTOS DE PROCESO" in t_up else "CONOCIMIENTOS DEL SABER HACER"
-                            
-                            if start_marker in t_up and end_marker in t_up:
-                                part = t_up.split(start_marker)[1].split(end_marker)[0]
-                                self.competencies_data[current_comp]["concepts"].extend(self._clean_list(part))
-                        
-                        # Intentar capturar Procesos/Saber Hacer
-                        if "PROCESO" in t_up or "SABER HACER" in t_up:
-                            start_marker = "CONOCIMIENTOS DE PROCESO" if "CONOCIMIENTOS DE PROCESO" in t_up else "CONOCICMIENTOS DEL SABER HACER"
-                            end_marker = "CRITERIOS DE EVALUACIÓN"
-                            
-                            if start_marker in t_up and end_marker in t_up:
-                                part = t_up.split(start_marker)[1].split(end_marker)[0]
-                                self.competencies_data[current_comp]["processes"].extend(self._clean_list(part))
-                    except Exception as e:
-                        print(f"[WARN] Error extrayendo conocimientos: {e}")
+                comp_sections = re.split(r'CONTENIDOS\s+CURRICULARES', all_text_clean, flags=re.IGNORECASE)
+                for section in comp_sections[1:]:
+                    code_match = re.search(r'\b(\d{9})\b', section)
+                    if not code_match: continue
+                    code = code_match.group(1)
+                    
+                    # LIMPIEZA AGRESIVA DE NOMBRE
+                    name_match = re.search(r'(?:4\.1|COMPETENCIA)\s*(.*?)\s*(?:4\.2|C[OÓ]DIGO|DURACI[OÓ]N)', section, re.IGNORECASE | re.DOTALL)
+                    raw_name = name_match.group(1) if name_match else f"{code}"
+                    full_name = re.sub(r'^.*?NORMA\s*/\s*UNIDAD\s*DE\s*', '', raw_name, flags=re.IGNORECASE | re.DOTALL)
+                    full_name = re.sub(r'^\s*COMPETENCIA\s*', '', full_name, flags=re.IGNORECASE)
+                    full_name = re.sub(r'\s*COMPETENCIA\s*$', '', full_name, flags=re.IGNORECASE)
+                    full_name = re.sub(r'^\s*4\.1\s*', '', full_name, flags=re.IGNORECASE)
+                    full_name = clean_cid_and_spacing(full_name).upper().strip()
+                    
+                    # EXTRACCIÓN DE DURACIÓN (Numeral 4.4)
+                    dur_match = re.search(r'4\.4\s+DURACI[OÓ]N\s+M[AÁ]XIMA.*?(\d+)\s*horas', section, re.IGNORECASE | re.DOTALL)
+                    duration = int(dur_match.group(1)) if dur_match else 0
+                    
+                    self.competencies_data[code] = {"name": full_name, "code": code, "duration": duration, "concepts": [], "processes": [], "criteria": []}
+                    
+                    s_match = re.search(r'CONOCIMIENTOS\s+DEL\s+SABER\s*(.*?)\s*(?:CONOCIMIENTOS\s+DE\s+PROCESO|CRITERIOS|4\.)', section, re.IGNORECASE | re.DOTALL)
+                    if s_match: self.competencies_data[code]["concepts"] = self._clean_list(s_match.group(1))
+                    p_match = re.search(r'CONOCIMIENTOS\s+DE\s+PROCESO\s*(.*?)\s*(?:CONOCIMIENTOS\s+DEL\s+SABER|CRITERIOS|4\.)', section, re.IGNORECASE | re.DOTALL)
+                    if p_match: self.competencies_data[code]["processes"] = self._clean_list(p_match.group(1))
+                    c_match = re.search(r'CRITERIOS\s+DE\s+EVALUACI[OÓ]N\s*(.*?)\s*(?:PERFIL|CONTENIDOS|4\.|5\.|6\.)', section, re.IGNORECASE | re.DOTALL)
+                    if c_match: self.competencies_data[code]["criteria"] = self._clean_list(c_match.group(1))
+        except Exception as e: log_debug(f"[ERROR PDF 1] {e}")
 
-                if "CRITERIOS DE EVALUACIÓN" in t_up:
-                    part = t_up.split("CRITERIOS DE EVALUACIÓN")[1].split("12. CONTROL DE CAMBIOS")[0]
-                    self.competencies_data[current_comp]["criteria"].extend(self._clean_list(part))
+    def extract_team_details(self):
+        """ PDF 3: EQUIPO - CRUCE FLEXIBLE """
+        if not self.team_pdf: return
+        log_debug(f"[STEP 1.5] Analizando Equipo (PDF 3)...")
+        try:
+            with pdfplumber.open(self.team_pdf) as pdf:
+                full_text = ""
+                for page in pdf.pages: full_text += (page.extract_text() or "") + "\n"
+                
+                date_p = r'(\d{1,2}(?:\s+de\s+[a-zA-Z]+|\s*[\/\-]\s*\d{1,2})\s*[\/\-]?\s*\d{2,4})'
+                s_match = re.search(r'inicio.*?Etapa.*?Lectiva.*?' + date_p, full_text, re.IGNORECASE | re.DOTALL)
+                if s_match: self.data["pedagogicalPlanning"]["metadata"]["lectivaStartDate"] = normalize_date(s_match.group(1))
+                e_match = re.search(r'Fin.*?Etapa.*?Lectiva.*?' + date_p, full_text, re.IGNORECASE | re.DOTALL)
+                if e_match: self.data["pedagogicalPlanning"]["metadata"]["lectivaEndDate"] = normalize_date(e_match.group(1))
+
+                for page in pdf.pages:
+                    tables = page.extract_tables()
+                    for table in tables:
+                        for row in table:
+                            if not row or len(row) < 2: continue
+                            instructor = clean_cid_and_spacing(str(row[0]))
+                            if not instructor or normalize_text(instructor) in ["INSTRUCTOR", "NOMBRE", "COMPETENCIAS"]: continue
+                            
+                            # Separar competencias por viñetas o saltos
+                            c_raw = str(row[1])
+                            c_lines = re.split(r'[•●\-\*]|\n', c_raw)
+                            for c_line in c_lines:
+                                line_clean = clean_cid_and_spacing(c_line)
+                                if len(line_clean) < 10: continue
+                                
+                                code_m = re.search(r'\b(\d{9})\b', line_clean)
+                                if code_m:
+                                    self.instructor_map[code_m.group(1)] = instructor
+                                else:
+                                    # Fallback: Coincidencia por palabras clave
+                                    words = {w for w in normalize_text(line_clean).split() if len(w) > 3}
+                                    if words:
+                                        if "keyword_matches" not in self.instructor_map: self.instructor_map["keyword_matches"] = []
+                                        self.instructor_map["keyword_matches"].append({"keywords": words, "name": instructor})
+            log_debug(f"  [PDF 3] Datos procesados.")
+        except Exception as e: log_debug(f"[ERROR PDF 3] {e}")
+
+    def _get_suggested_instructor(self, c_code, c_full_name):
+        if c_code in self.instructor_map: return self.instructor_map[c_code]
+        if "keyword_matches" in self.instructor_map:
+            comp_words = {w for w in normalize_text(c_full_name).split() if len(w) > 3}
+            best_match, max_overlap = "", 0
+            for entry in self.instructor_map["keyword_matches"]:
+                overlap = len(comp_words.intersection(entry["keywords"]))
+                if overlap > max_overlap:
+                    max_overlap = overlap
+                    best_match = entry["name"]
+            if max_overlap > 0 and (max_overlap / len(comp_words)) >= 0.4: return best_match
+        return ""
+
+    def _detect_phase(self, text):
+        if not text: return None
+        raw = clean_cid_and_spacing(text).upper()
+        if len(raw) < 5 or len(raw) > 15: return None
+        nl = normalize_text(raw)
+        if nl == "ANALISIS": return "ANALYSIS"
+        if nl == "PLANEACION": return "PLANNING"
+        if nl == "EJECUCION": return "EXECUTION"
+        if nl == "EVALUACION": return "EVALUATION"
+        if nl == "INDUCCION": return "INDUCCION"
+        return None
 
     def extract_project_structure(self):
-        print(f"[STEP 2] Analizando Proyecto...")
+        log_debug(f"[STEP 2] Analizando Proyecto (PDF 2)...")
         current_phase = "ANALYSIS"
-        current_proj_act = "Actividad General"
-        
-        # Mapa de normalización de fases
-        phase_map = {
-            "ANALISIS": "ANALYSIS", "ANÁLISIS": "ANALYSIS",
-            "PLANEACION": "PLANNING", "PLANEACIÓN": "PLANNING",
-            "EJECUCION": "EXECUTION", "EJECUCIÓN": "EXECUTION",
-            "EVALUACION": "EVALUATION", "EVALUACIÓN": "EVALUATION",
-            "ETAPA PRODUCTIVA": "ETAPA_PRODUCTIVA"
-        }
-
-        seen_triplets = set()
-
-        with pdfplumber.open(self.project_pdf) as pdf:
-            for page in pdf.pages:
-                tables = page.extract_tables()
-                if not tables: continue
-                
-                for table in tables:
-                    for row in table:
-                        if not row or len(row) < 3: continue
-                        
-                        # Limpiar celdas
-                        cells = [str(c).replace("\n", " ").strip() if c else "" for c in row]
-                        
-                        # 1. Detectar cambio de Fase en la primera columna
-                        potential_phase = cells[0].upper()
-                        for key, val in phase_map.items():
-                            if key in potential_phase:
-                                current_phase = val
-                                break
-
-                        # 2. Detectar Actividad de Proyecto (Segunda columna)
-                        if len(cells[1]) > 20 and cells[1].upper() not in phase_map:
-                            current_proj_act = cells[1]
-
-                        # 3. Detectar RAP (6 dígitos) y Competencia (9 dígitos)
-                        row_text = " ".join(cells)
-                        rap_match = re.search(r'(\d{6})\b', row_text)
-                        comp_match = re.search(r'(\d{9})\b', row_text)
-                        
-                        if rap_match and comp_match:
-                            r_code, c_code = rap_match.group(1), comp_match.group(1)
-                            
-                            # Clave única para evitar duplicados en la misma extracción
-                            unique_key = (current_phase, r_code, c_code)
-                            if unique_key not in seen_triplets:
-                                # Buscar la celda que contiene la descripción del RAP
-                                r_desc = ""
-                                for cell in cells:
-                                    if r_code in cell:
-                                        r_desc = cell.replace(r_code, "").replace(c_code, "").strip()
-                                        r_desc = re.sub(r'^[ \-.]+', '', r_desc)
+        last_comp = None
+        try:
+            with pdfplumber.open(self.project_pdf) as pdf:
+                for page in pdf.pages:
+                    if any(x in (page.extract_text() or "").upper() for x in ["TABLA DE CONTENIDO", "INDICE"]): continue
+                    tables = page.extract_tables()
+                    for table in tables:
+                        for row in table:
+                            if not row or len(row) < 2: continue
+                            cells = [clean_cid_and_spacing(str(c)) for c in row]
+                            for i in [0, 1]:
+                                if i < len(cells):
+                                    found = self._detect_phase(cells[i])
+                                    if found: current_phase = found; break
+                            if len(cells) > 1 and len(cells[1]) > 25:
+                                self.phase_activities[current_phase] = cells[1].strip().upper()
+                            comp_match = re.search(r'\b(\d{9})\b', " ".join(cells))
+                            if comp_match: last_comp = comp_match.group(1)
+                            for i in range(1, len(cells)):
+                                r_match = re.search(r'\b(\d{6,7})\b', cells[i])
+                                if r_match and last_comp:
+                                    r_code = r_match.group(1)
+                                    if r_code in self.global_rap_registry: continue
+                                    r_desc = re.sub(r'^[ \-.\d]+', '', cells[i].replace(r_code, "")).strip().upper()
+                                    if len(r_desc) > 10:
+                                        self._integrate(current_phase, last_comp, r_desc, r_code)
+                                        self.global_rap_registry.add(r_code)
+                                        self.unique_raps_codes.add(r_code)
                                         break
-                                
-                                if not r_desc: r_desc = f"Resultado de Aprendizaje {r_code}"
-                                
-                                self._integrate(current_phase, current_proj_act, c_code, r_desc)
-                                seen_triplets.add(unique_key)
-                                self.processed_raps.add(f"{current_phase}_{r_code}")
+            self._final_cleanup()
+        except Exception as e: log_debug(f"[ERROR PDF 2] {e}"); self._final_cleanup()
 
-        # Garantizar Etapa Productiva si no se detectó en tablas
-        if "ETAPA_PRODUCTIVA" not in [p["phase"] for p in self.data["pedagogicalPlanning"]["content"]]:
-            prod_h = self.data["pedagogicalPlanning"]["metadata"].get("productivaHours", 0)
-            if prod_h > 0:
-                self._integrate("ETAPA_PRODUCTIVA", "Etapa Productiva", "999999999", "Realizar etapa productiva")
-                ep = next(p for p in self.data["pedagogicalPlanning"]["content"] if p["phase"] == "ETAPA_PRODUCTIVA")
-                ep["competencies"][0]["totalCompetenceHours"] = prod_h
-
-        print(f"[INFO] Extraccion finalizada: {len(self.processed_raps)} RAPs unicos in {len(self.data['pedagogicalPlanning']['content'])} fases.")
-
-    def _integrate(self, phase, proj_act, c_code, r_desc):
-        content = self.data["pedagogicalPlanning"]["content"]
-        comp_info = self.competencies_data.get(c_code, {"name": f"Competencia {c_code}", "hours": 0, "concepts":[], "processes":[], "criteria":[]})
-        
-        phase_node = next((p for p in content if p["phase"] == phase), None)
-        if not phase_node:
-            phase_node = {"phase": phase, "projectActivity": proj_act, "competencies": []}
-            content.append(phase_node)
-        
-        c_node = next((c for c in phase_node["competencies"] if c["code"] == c_code), None)
+    def _integrate(self, phase, c_code, r_desc, r_code):
+        if phase not in self.temp_content: self.temp_content[phase] = []
+        c_info = self.competencies_data.get(c_code) or {"name": f"COMPETENCIA {c_code}", "code": c_code, "duration": 0, "concepts": [], "processes": [], "criteria": []}
+        c_node = next((c for c in self.temp_content[phase] if c["code"] == c_code), None)
         if not c_node:
+            instr = self._get_suggested_instructor(c_code, c_info["name"])
             c_node = {
-                "name": comp_info["name"], "code": c_code, "totalCompetenceHours": comp_info["hours"],
-                "knowledge": {
-                    "conceptsAndPrinciples": list(set(comp_info["concepts"])), 
-                    "processes": list(set(comp_info["processes"]))
-                },
-                "learningOutcomes": []
+                "name": c_info["name"], "code": c_code, "totalCompetenceHours": c_info.get("duration", 0),
+                "knowledge": {"conceptsAndPrinciples": c_info["concepts"], "processes": c_info["processes"]},
+                "evaluationCriteria": c_info["criteria"], "learningOutcomes": [], 
+                "suggestedInstructor": {"id": "", "name": instr}
             }
-            phase_node["competencies"].append(c_node)
-        
-        c_node["learningOutcomes"].append({
-            "description": r_desc, 
-            "evaluationCriteria": comp_info["criteria"],
-            "pedagogicalActivities": [{
-                "description": "", # Actividades de aprendizaje a desarrollar
-                "hours": {"direct": 0, "independent": 0},
-                "learningEvidences": [],
-                "didacticStrategies": [],
-                "environment": {
-                    "type": "", # Ambientes de aprendizaje tipificados
-                    "materials": [] # Materiales de formación
-                },
-                "observations": "", # Fechas y observaciones
-                "suggestedInstructor": {"id": "", "name": ""},
-                "scheduleDetails": {
-                    "assignedDays": [],
-                    "shift": "",
-                    "calendarNotes": ""
-                }
-            }]
-        })
+            self.temp_content[phase].append(c_node)
+        if not any(r["description"] == r_desc for r in c_node["learningOutcomes"]):
+            c_node["learningOutcomes"].append({
+                "description": r_desc, "evaluationCriteria": [], 
+                "pedagogicalActivities": [{
+                    "description": "", 
+                    "hours": {"direct": 0, "independent": 0}, 
+                    "learningEvidences": [], "didacticStrategies": [], 
+                    "environment": {"type": "", "materials": []}, "observations": "",
+                    "suggestedInstructor": c_node["suggestedInstructor"], 
+                    "scheduleDetails": {"assignedDays": [], "shift": "", "calendarNotes": ""}
+                }]
+            })
+
+    def _final_cleanup(self):
+        self.data["pedagogicalPlanning"]["content"] = []
+        for p in ["INDUCCION", "ANALYSIS", "PLANNING", "EXECUTION", "EVALUATION"]:
+            if p in self.temp_content:
+                phase_act = self.phase_activities.get(p, "ACTIVIDAD GENERAL DE LA FASE")
+                self.data["pedagogicalPlanning"]["content"].append({"phase": p, "projectActivity": phase_act, "competencies": self.temp_content[p]})
 
     def _regex_find(self, pattern, text, default):
         m = re.search(pattern, text, re.IGNORECASE)
-        return m.group(1).split("\n")[0].strip() if m else default
+        return clean_cid_and_spacing(m.group(1)) if m else default
 
     def _clean_list(self, text):
-        items = re.split(r'[\u2022\u00b7\-]|\d+\.', text)
-        return [i.strip() for i in items if len(i.strip()) > 8]
+        if not text: return []
+        text = clean_cid_and_spacing(text)
+        items = re.split(r'\.\s+|\n|(?<=[A-Z])\s*-\s*', text)
+        cleaned = []
+        for i in items:
+            s = re.sub(r'^\d+(\.\d+)*\s*', '', i).strip()
+            if len(s) > 2 and "Página" not in s: cleaned.append(s.upper())
+        return list(dict.fromkeys(cleaned))
 
-    def send(self):
-        if not self.data["pedagogicalPlanning"]["content"]:
-            print("[WARN] No se extrajo contenido. Abortando subida.")
-            return
-        url = "http://localhost:4500/api/planning/upload"
-        try:
-            res = requests.post(url, json=self.data)
-            if res.status_code == 200: print(f"[SYNC] Sincronizado con MongoDB con exito.")
-            else: print(f"[ERROR] Error al subir: {res.text}")
-        except Exception as e: print(f"[ERROR] No se pudo conectar al backend: {e}")
+    def output_result(self):
+        if self.data["pedagogicalPlanning"]["content"]:
+            print("---JSON_START---")
+            print(json.dumps(self.data))
+            print("---JSON_END---")
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 4:
-        p_pdf, pr_pdf, fiche = sys.argv[1], sys.argv[2], sys.argv[3]
-        ext = SenaExtractor(p_pdf, pr_pdf, fiche)
-        ext.extract_program_details()
-        ext.extract_project_structure()
-        ext.send()
-        print(f"[DONE] Proceso finalizado. Ficha: {ext.fiche}")
+    args = sys.argv[1:]
+    if len(args) < 3: sys.exit(1)
+    program, project, team, fiche = args[0], args[1], (args[2] if len(args)==4 else None), (args[3] if len(args)==4 else args[2])
+    ext = SenaExtractor(program, project, team, fiche)
+    ext.extract_program_details(); ext.extract_team_details(); ext.extract_project_structure(); ext.output_result()
+    log_debug(f"[DONE] Total RAPs: {len(ext.unique_raps_codes)}. Ficha: {ext.fiche}")

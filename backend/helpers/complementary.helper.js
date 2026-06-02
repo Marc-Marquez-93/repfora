@@ -2,7 +2,7 @@ import Instructor from "../models/Instructor.js";
 import ComplementaryCatalog from "../models/ComplementaryCatalog.js";
 import ComplementaryRequest from "../models/ComplementaryRequest.js";
 import User from "../models/User.js";
-import Coordination from "../models/Coordination.js";
+import { coordinationHelper } from "./coordination.helper.js";
 
 const complementaryHelper = {};
 
@@ -139,10 +139,13 @@ complementaryHelper.validateFichaNumberUnique = async (fichaNumber, excludeId = 
 
 complementaryHelper.validateStateTransition = async (id, newState) => {
   const validTransitions = {
+    PENDIENTE: ["CANCELADA"],
+    RECHAZADA: ["CANCELADA"],
     APROBADA: ["FICHA_ASIGNADA", "CANCELADA"],
     FICHA_ASIGNADA: ["INSCRIPCION", "CANCELADA"],
     INSCRIPCION: ["PROGRAMADA", "CANCELADA"],
-    PROGRAMADA: ["CANCELADA"],
+    PROGRAMADA: ["EJECUCION", "CANCELADA"],
+    EJECUCION: ["CERRADA"],
   };
   try {
     const request = await ComplementaryRequest.findById(id, { status: 0 });
@@ -160,10 +163,10 @@ complementaryHelper.validateStateTransition = async (id, newState) => {
 
 complementaryHelper.findComplementaryCoordinator = async () => {
   try {
-    const coordination = await Coordination.findOne({
-      name: "PROGRAMAS ESPECIALES",
-      status: 0,
-    }).populate("coordinator");
+    const coordination = await coordinationHelper.findCoordinationByName(
+      "PROGRAMAS ESPECIALES",
+      "coordinator"
+    );
     return coordination?.coordinator || null;
   } catch (error) {
     throw new Error("Error al buscar coordinador de complementarias");
@@ -172,30 +175,109 @@ complementaryHelper.findComplementaryCoordinator = async () => {
 
 complementaryHelper.findComplementaryProgrammers = async () => {
   try {
-    const coordination = await Coordination.findOne({
-      name: "PROGRAMAS ESPECIALES",
-      status: 0,
-    }).populate("programmers");
+    const coordination = await coordinationHelper.findCoordinationByName(
+      "PROGRAMAS ESPECIALES",
+      "programmers"
+    );
     return coordination?.programmers || [];
   } catch (error) {
     throw new Error("Error al buscar programadores de complementarias");
   }
 };
 
+// ==================== Coordinadores (desplegable supervisor) ====================
+
+complementaryHelper.findAllCoordinators = async () => {
+  try {
+    return await User.find({ role: "COORDINADOR", status: 0 })
+      .select("_id name email role")
+      .sort({ name: 1 });
+  } catch (error) {
+    throw new Error("Error al buscar coordinadores");
+  }
+};
+
+// ==================== Datos de formación (coordinador post-aprobación) ====================
+
+complementaryHelper.validateFormationDataEditable = async (id) => {
+  try {
+    const request = await ComplementaryRequest.findById(id, { status: 0 });
+    if (!request) {
+      throw new Error("La solicitud no existe");
+    }
+    if (request.state !== "APROBADA" && request.state !== "FICHA_ASIGNADA") {
+      throw new Error("La solicitud debe estar en estado APROBADA o FICHA_ASIGNADA para agregar datos de formación");
+    }
+    if (request.formationDataCompleted) {
+      throw new Error("Los datos de formación ya fueron completados para esta solicitud");
+    }
+  } catch (error) {
+    if (
+      error.message.includes("APROBADA") ||
+      error.message.includes("completados") ||
+      error.message.includes("no existe")
+    ) {
+      throw error;
+    }
+    throw new Error("Error al validar datos de formación");
+  }
+};
+
 complementaryHelper.normalizeRequestFields = (body) => {
   const textFields = [
-    "idCampesena", "rutaCampesena", "supervisorNombre",
+    "supervisorNombre",
     "ambienteNombre", "ambienteDireccion", "municipio",
     "vereda", "direccion", "nombreEmpresa", "nitEmpresa",
-    "contactoEmpresa", "telefonoEmpresa", "tipoPrograma",
-    "tipoPoblacion", "requisitosIngreso", "recursosNecesarios",
-    "proyectoAsociado", "learningActivity",
+    "contactoEmpresa", "telefonoEmpresa",
+    "requisitosIngreso", "recursosNecesarios",
   ];
+  // Campos con enum definido — solo trim, sin toUpperCase (ya vienen con el formato del enum)
+  const enumFields = ["tipoPrograma", "tipoPoblacion"];
   const normalized = {};
   for (const field of textFields) {
     normalized[field] = (body[field] || "").toUpperCase().trim();
   }
+  for (const field of enumFields) {
+    normalized[field] = (body[field] || "").trim();
+  }
   return normalized;
+};
+
+complementaryHelper.validateSesionesHours = (sesiones, prfDuracionMaxima) => {
+  if (!sesiones || !sesiones.length) return;
+  const total = sesiones.reduce((sum, s) => sum + (s.totalHoras || 0), 0);
+  if (prfDuracionMaxima && total > prfDuracionMaxima) {
+    throw new Error(`Las sesiones suman ${total} horas, pero la duracion maxima es ${prfDuracionMaxima}`);
+  }
+};
+
+// REUNION2 Cambio 2: obtener coordinadores activos para desplegable de supervisor
+complementaryHelper.findAllCoordinators = async () => {
+  const coordinators = await User.find({ role: "COORDINADOR", status: 0 })
+    .select("_id name email")
+    .sort({ name: 1 });
+  return coordinators;
+};
+
+// REUNION2 Cambio 4: validar que se pueden editar datos de formación (estado correcto y no completados)
+complementaryHelper.validateFormationDataEditable = async (id) => {
+  const request = await ComplementaryRequest.findById(id);
+  if (!request) {
+    throw new Error("La solicitud no existe");
+  }
+  if (request.status !== 0) {
+    throw new Error("La solicitud está inactiva");
+  }
+  const validStates = ["APROBADA", "FICHA_ASIGNADA"];
+  if (!validStates.includes(request.state)) {
+    throw new Error(
+      `La solicitud debe estar en estado APROBADA o FICHA_ASIGNADA para editar datos de formación. Estado actual: ${request.state}`
+    );
+  }
+  if (request.formationDataCompleted) {
+    throw new Error("Los datos de formación ya fueron completados");
+  }
+  return request;
 };
 
 export { complementaryHelper };

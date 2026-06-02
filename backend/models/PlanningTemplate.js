@@ -25,7 +25,7 @@ const activityTemplateSchema = new mongoose.Schema({
   },
   scheduleDetails: {
     assignedDays: [String],
-    shift: { type: String, enum: ['morning', 'afternoon', 'night', '', null] },
+    shift: { type: String, enum: ['morning', 'afternoon', 'night', 'diurna', 'nocturna', 'mixta_manana', 'mixta_manana_tarde', '', null] },
     hoursPerDay: { type: Number },
     calendarNotes: { type: String }
   }
@@ -51,7 +51,7 @@ const competenceTemplateSchema = new mongoose.Schema({
 const phaseTemplateSchema = new mongoose.Schema({
   phase: {
     type: String,
-    enum: ['ANALYSIS', 'PLANNING', 'EXECUTION', 'EVALUATION', 'ETAPA_PRODUCTIVA'],
+    enum: ['INDUCCION', 'ANALYSIS', 'PLANNING', 'EXECUTION', 'EVALUATION', 'ETAPA_PRODUCTIVA'],
     required: true
   },
   projectActivity: { type: String },

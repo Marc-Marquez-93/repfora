@@ -1,24 +1,29 @@
 /**
  * @typedef {Object} ComplementaryRequest
+ * @property {string} numeroSolicitud - Consecutivo automático (0000001-YYYYMMDD)
  * @property {Schema.Types.ObjectId} catalogCourse - Referencia al curso del catálogo
  * @property {string} catalogCourseName - Nombre del curso denormalizado
  * @property {string} catalogCourseCode - Código del curso denormalizado
  * @property {string} catalogCourseVersion - Versión del curso denormalizada
+ * @property {number} prfDuracionMaxima - Duración máxima en horas del programa
  * @property {Schema.Types.ObjectId} instructor - Referencia al instructor solicitante
- * @property {string} idCampesena - ID Campesena
- * @property {string} rutaCampesena - Ruta Campesena
- * @property {string} supervisorNombre - Nombre del supervisor
+ * @property {string} idCampesena - ID Campesena (deshabilitado para instructor, lo llena coordinador)
+ * @property {string} rutaCampesena - Ruta Campesena (deshabilitado para instructor, lo llena coordinador)
+ * @property {Schema.Types.ObjectId} campesena - Referencia a la opción campesena seleccionada
+ * @property {string} supervisorNombre - Nombre del supervisor (denormalizado)
+ * @property {Schema.Types.ObjectId} supervisor - Referencia al coordinador supervisor
  * @property {string} ambienteNombre - Nombre del ambiente de formación
  * @property {string} ambienteDireccion - Dirección del ambiente de formación
  * @property {string} formationDocument - Ruta del documento de formación subido
- * @property {string[]} competencies - Competencias de formación
- * @property {string[]} outcomes - Resultados de aprendizaje
- * @property {string} learningActivity - Actividad de aprendizaje
- * @property {Date} fechaInicio - Fecha de inicio del programa
- * @property {Date} fechaFin - Fecha de finalización del programa
- * @property {Date} fechaInscripcion - Fecha de apertura de inscripciones
- * @property {Date} fechaMatriculaInicio - Fecha inicio de matrícula
- * @property {Date} fechaMatriculaFin - Fecha fin de matrícula
+ * @property {string[]} competencies - Competencias de formación (llenado por coordinador post-aprobación)
+ * @property {string[]} outcomes - Resultados de aprendizaje (llenado por coordinador post-aprobación)
+ * @property {string} learningActivity - Actividad de aprendizaje (llenado por coordinador post-aprobación)
+ * @property {Array} sesiones - Sesiones con competencia, resultados y actividad de aprendizaje
+ * @property {Date} fechaInicio - Fecha de inicio del programa (asignado en assign-ficha)
+ * @property {Date} fechaFin - Fecha de finalización del programa (asignado en assign-ficha)
+ * @property {Date} fechaInscripcion - Fecha de apertura de inscripciones (asignado en assign-ficha)
+ * @property {Date} fechaMatriculaInicio - Fecha inicio de matrícula (asignado en assign-ficha)
+ * @property {Date} fechaMatriculaFin - Fecha fin de matrícula (asignado en assign-ficha)
  * @property {string} municipio - Municipio de ubicación
  * @property {string} vereda - Vereda de ubicación
  * @property {string} direccion - Dirección de ubicación
@@ -26,16 +31,18 @@
  * @property {string} nitEmpresa - NIT de la empresa
  * @property {string} contactoEmpresa - Contacto de la empresa
  * @property {string} telefonoEmpresa - Teléfono de la empresa
- * @property {number} numAprendices - Número de aprendices
- * @property {string} tipoPrograma - Tipo de programa
- * @property {string} tipoPoblacion - Tipo de población
+ * @property {number} numAprendices - Número de aprendices (required)
+ * @property {string} tipoPrograma - Tipo de programa (enum 11 valores)
+ * @property {string} tipoPoblacion - Tipo de población (enum 7 valores)
  * @property {string} requisitosIngreso - Requisitos de ingreso
  * @property {string} recursosNecesarios - Recursos necesarios
- * @property {string} state - Estado de la solicitud
+ * @property {string} state - Estado de la solicitud (incluye EJECUCION)
  * @property {Array} history - Historial de cambios de estado
+ * @property {boolean} formationDataCompleted - Si el coordinador completó datos de formación
+ * @property {Schema.Types.ObjectId[]} instructoresAdicionales - Instructores adicionales de la ficha
  * @property {string} fichaNumber - Número de ficha asignado
- * @property {string} codigoSolicitud - Código de solicitud SOFIA PLUS (se llena al asignar ficha)
- * @property {string} fichaCaracterizacion - Ficha de caracterización SOFIA PLUS (se llena al asignar ficha)
+ * @property {string} codigoSolicitud - Código de solicitud SOFIA PLUS
+ * @property {string} fichaCaracterizacion - Ficha de caracterización SOFIA PLUS
  * @property {string} proyectoAsociado - Proyecto asociado
  * @property {number} status - Estado del registro
  */
@@ -60,6 +67,10 @@ const ComplementaryRequestSquema = new Schema(
       type: String,
       required: true,
     },
+    prfDuracionMaxima: {
+      type: Number,
+      default: 0,
+    },
     instructor: {
       type: Schema.Types.ObjectId,
       ref: "Instructor",
@@ -69,6 +80,11 @@ const ComplementaryRequestSquema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Environment",
     },
+    numeroSolicitud: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     idCampesena: {
       type: String,
       default: "",
@@ -77,9 +93,19 @@ const ComplementaryRequestSquema = new Schema(
       type: String,
       default: "",
     },
+    campesena: {
+      type: Schema.Types.ObjectId,
+      ref: "ComplementaryCampesena",
+      default: null,
+    },
     supervisorNombre: {
       type: String,
       default: "",
+    },
+    supervisor: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
     ambienteNombre: {
       type: String,
@@ -107,6 +133,17 @@ const ComplementaryRequestSquema = new Schema(
       type: String,
       default: "",
     },
+    sesiones: [
+      {
+        fecha: { type: String },
+        horaInicio: { type: String },
+        horaFin: { type: String },
+        totalHoras: { type: Number },
+        competencia: { type: String, default: "" },
+        resultados: [{ type: String }],
+        actividadAprendizaje: { type: String, default: "" },
+      },
+    ],
     fechaInicio: {
       type: Date,
     },
@@ -152,15 +189,37 @@ const ComplementaryRequestSquema = new Schema(
     },
     numAprendices: {
       type: Number,
-      default: 0,
+      required: true,
     },
     tipoPrograma: {
       type: String,
-      default: "",
+      required: true,
+      enum: [
+        "ATENCIÓN A INSTITUCIONES",
+        "FORMACIÓN ESPECIAL MIPYMES-PND",
+        "CAMPSENA",
+        "CAMPSENA - AULA MÓVIL",
+        "CAMPSENA RADIAL",
+        "PROGRAMA DE BILINGÜISMO",
+        "FULL POPULAR",
+        "FULL POPULAR - AULA MÓVIL",
+        "POSCONFLICTO",
+        "AULA MÓVIL",
+        "INPEC",
+      ],
     },
     tipoPoblacion: {
       type: String,
-      default: "",
+      required: true,
+      enum: [
+        "Empresa",
+        "Demanda social",
+        "Emprendedores",
+        "Convenio Universidad",
+        "Remitidos por el CIE",
+        "Apoyo a otros Centros",
+        "Microempresarios",
+      ],
     },
     requisitosIngreso: {
       type: String,
@@ -179,6 +238,7 @@ const ComplementaryRequestSquema = new Schema(
         "FICHA_ASIGNADA",
         "INSCRIPCION",
         "PROGRAMADA",
+        "EJECUCION",
         "CANCELADA",
         "CERRADA",
       ],
@@ -188,10 +248,20 @@ const ComplementaryRequestSquema = new Schema(
       {
         previousState: { type: String },
         newState: { type: String },
-        changedBy: { type: String },
+        changedBy: { type: Schema.Types.ObjectId, ref: "User" },
         changedByRole: { type: String },
         timestamp: { type: Date, default: Date.now },
         observations: { type: String, default: "" },
+      },
+    ],
+    formationDataCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    instructoresAdicionales: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Instructor",
       },
     ],
     fichaNumber: {

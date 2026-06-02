@@ -255,7 +255,6 @@ function filterInstructor(val, update, abort) {
 }
 
 async function activarDesactivar(data) {
-  console.log(data);
   
   if (data.status === 0) {
     await put(`/othersschedules/inactive/${data._id}`, null);
