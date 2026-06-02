@@ -14,11 +14,25 @@ const TEST_MAIL_RECIPIENT = process.env.TEST_MAIL_RECIPIENT;
 
 export async function initEmailSettings() {
   try {
+    const envOverride = process.env.EMAIL_ENABLED;
     let settings = await AppSettings.findOne();
+
     if (!settings) {
+      // Primera vez: crear con el valor del .env
       settings = await AppSettings.create({ emailEnabled });
       console.log(`[EMAIL] Configuración inicial guardada en BD (emailEnabled=${emailEnabled})`);
+    } else if (envOverride !== undefined) {
+      // Si EMAIL_ENABLED está definido en .env, siempre tiene prioridad sobre la BD
+      const envValue = envOverride === 'true';
+      if (settings.emailEnabled !== envValue) {
+        await AppSettings.findOneAndUpdate({}, { emailEnabled: envValue });
+        console.log(`[EMAIL] .env sobreescribe BD: emailEnabled cambiado de ${settings.emailEnabled} → ${envValue}`);
+      } else {
+        console.log(`[EMAIL] Estado cargado desde .env (emailEnabled=${envValue})`);
+      }
+      emailEnabled = envValue;
     } else {
+      // Sin variable en .env: respetar lo que haya en la BD
       emailEnabled = settings.emailEnabled;
       console.log(`[EMAIL] Estado cargado desde BD (emailEnabled=${emailEnabled})`);
     }
