@@ -169,6 +169,17 @@ async function goConsult() {
           label: data.instructor.numdocument,
           value: data.instructor._id,
         };
+        // Guardar email del instructor en el store
+        userStore.email = data.instructor.email;
+        userStore.instructorData = {
+          _id: data.instructor._id,
+          name: data.instructor.name,
+          email: data.instructor.email,
+          emailpersonal: data.instructor.emailpersonal,
+        };
+        userStore.token = data.token;
+        // IMPORTANTE: Guardar dateLogin para que checkAuth() funcione
+        userStore.dateLogin = new Date().toISOString();
         cleanData();
         router.push("/home/instructor");
       }

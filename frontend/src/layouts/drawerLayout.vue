@@ -152,6 +152,12 @@ const menu = ref([
     route: "/users",
     roles: ["COORDINADOR"],
   },
+  {
+    name: "Complementarias",
+    icon: "add_circle",
+    route: "/home/complementarias/admin",
+    roles: ["PROGRAMADOR", "COORDINADOR"],
+  },
 ]);
 </script>
 

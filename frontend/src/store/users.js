@@ -12,6 +12,7 @@ export const storeUser = defineStore(
     let newConsult = ref("");
     let storageSummary = ref(null);
     let storageBannerDismissed = ref(false);
+    let instructorData = ref(null);
 
     const loginUser = async (credentials) => {
       try {
@@ -190,6 +191,7 @@ export const storeUser = defineStore(
       newConsult.value = "";
       storageSummary.value = null;
       storageBannerDismissed.value = false;
+      instructorData.value = null;
     };
 
     return {
@@ -214,6 +216,7 @@ export const storeUser = defineStore(
       storageBannerDismissed,
       fetchStorageSummary,
       dismissStorageBanner,
+      instructorData,
     };
   },
   {

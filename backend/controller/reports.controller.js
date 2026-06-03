@@ -106,21 +106,38 @@ const calculateHours = (events, tstart, tend, fstart, fend) => {
 
 
 //validate if exist the instructor
-reportsCtrl.responseInstr = async (req, res) => {  
+reportsCtrl.responseInstr = async (req, res) => {
   const { document, email } = req.body;
-  
+
   try {
     const instructor = await Instructor.findOne({
       numdocument: document,
     }).lean();
-    instructor.role="INSTRUCTOR"
-    const token = await webToken.generateToken(instructor); 
 
-    if (instructor.email.toLowerCase() == email.toLowerCase() || instructor.emailpersonal.toLowerCase() == email.toLowerCase()) {
-      return res.json({ instructor,token });
+    if (!instructor) {
+      return res.status(400).json({ msg: "Instructor no encontrado" });
     }
-    return res.status(400).json({ msg: "El instructor no existe "});
+
+    // Verificar que el email coincida
+    if (
+      instructor.email.toLowerCase() !== email.toLowerCase() &&
+      instructor.emailpersonal.toLowerCase() !== email.toLowerCase()
+    ) {
+      return res.status(400).json({ msg: "El correo no coincide con el instructor" });
+    }
+
+    // Crear payload con rol INSTRUCTOR explícitamente
+    const payload = {
+      id: instructor._id,
+      rol: "INSTRUCTOR",
+      email: instructor.email,
+    };
+
+    const token = await webToken.generateToken(payload);
+
+    return res.json({ instructor, token });
   } catch (error) {
+    console.error("[validateinst] Error:", error.message);
     res.status(400).json({ msg: "No fue posible terminar la operacion" });
   }
 

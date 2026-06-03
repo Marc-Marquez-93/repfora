@@ -1,7 +1,7 @@
 <template>
   <div>
-    <HeaderLayout title="Complementarias" />
-    <BtnBack route="/home/instructor" />
+    <HeaderLayout :title="isPlanning ? 'Planeación' : 'Complementarias'" />
+    <BtnBack :route="backRoute" />
 
     <div class="row justify-center">
       <div class="col-10 col-sm-6 col-md-4 col-lg-4 items-center flex q-my-lg">
@@ -20,7 +20,9 @@
           </div>
 
           <q-card-section class="text-center">
-            <div class="text-h5 text-weight-bold">ACCESO COMPLEMENTARIAS</div>
+            <div class="text-h5 text-weight-bold">
+              {{ isPlanning ? "ACCESO PLANEACIÓN" : "ACCESO COMPLEMENTARIAS" }}
+            </div>
           </q-card-section>
           <q-separator />
 
@@ -28,15 +30,16 @@
             <!-- Estado DOC_VERIFIED: enviar código -->
             <div v-if="state === 'DOC_VERIFIED'" class="text-center">
               <div class="text-subtitle2 q-mb-lg">
-                Para acceder al módulo de complementarias, genera un código de
-                verificación que será enviado a tus correos registrados.
+                Para acceder al módulo de
+                {{ isPlanning ? "planeación" : "complementarias" }}, genera un
+                código de verificación que será enviado a tus correos
+                registrados.
               </div>
               <q-card-actions class="column items-center">
                 <q-btn
                   label="ENVIAR CÓDIGO"
                   icon="send"
-                  class="save_as"
-                  style="width: 50%"
+                  class="button_style"
                   :loading="loading"
                   @click="sendCode"
                 />
@@ -157,7 +160,7 @@
 </template>
 
 <script setup>
-import { ref, onUnmounted } from "vue";
+import { ref, onUnmounted, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { post } from "../services/api.js";
 import HeaderLayout from "../layouts/headerViewsLayout.vue";
@@ -169,8 +172,37 @@ import { notifySuccessRequest, notifyErrorRequest } from "../common/notify";
 const router = useRouter();
 const useStore = storeUser();
 
+const isPlanning = computed(
+  () => router.currentRoute.value.query.redirect === "planning",
+);
+
+onMounted(() => {
+  const isAdmin = ["COORDINADOR", "PROGRAMADOR", "ADMIN"].includes(
+    useStore.getRole(),
+  );
+  if (isAdmin) {
+    const isPlanning = router.currentRoute.value.query.redirect === "planning";
+    const redirectPath = isPlanning
+      ? "/planning-dashboard"
+      : "/home/complementarias";
+    console.log(
+      "=== [LoginComplementarias] Admin bypass redirecting directly to:",
+      redirectPath,
+    );
+    router.replace(redirectPath);
+  }
+});
+
+const backRoute = computed(() => {
+  const isAdmin = ["COORDINADOR", "PROGRAMADOR", "ADMIN"].includes(
+    useStore.getRole(),
+  );
+  return router.currentRoute.value.query.redirect === "planning" && isAdmin
+    ? "/home"
+    : "/home/instructor";
+});
+
 // ─── Estado ───────────────────────────────────────────────────────────────────
-console.log("=== [LoginComplementarias] token:", useStore.token, "| email:", useStore.email, "| instructor:", useStore.newConsult);
 const state = ref(useStore.token ? "DOC_VERIFIED" : "NO_ACCESS");
 const loading = ref(false);
 const sentEmails = ref([]);
@@ -184,20 +216,28 @@ let expiryTimer = null;
 
 // ─── Enviar código ────────────────────────────────────────────────────────────
 async function sendCode() {
-  console.log("=== [send-code] token:", useStore.token, "| email:", useStore.email);
   codeError.value = "";
   loading.value = true;
   clearTimers();
   try {
-    const res = await post("/complementary/access/send-code", { email: useStore.email });
+    const res = await post("/complementary/access/send-code", {
+      email: useStore.email,
+    });
     sentEmails.value = res.emails || [];
     otpDigits.value = ["", "", "", "", "", ""];
     state.value = "CODE_SENT";
-    notifySuccessRequest("Código enviado a tus correos");
+
+    if (res.devCode) {
+      notifySuccessRequest(`[Modo Desarrollo] Código generado: ${res.devCode}`);
+      otpDigits.value = res.devCode.split("");
+      setTimeout(() => verifyCode(), 1000);
+    } else {
+      notifySuccessRequest("Código enviado a tus correos");
+    }
+
     startResendCountdown();
     startExpiryCountdown();
   } catch (err) {
-    console.log("=== [send-code] Error ===", err?.response?.data);
     const msg =
       err?.response?.data?.msg ||
       "No se pudo enviar el código. Intenta de nuevo.";
@@ -214,16 +254,37 @@ async function verifyCode() {
   loading.value = true;
   const code = otpDigits.value.join("");
   try {
-    const res = await post("/complementary/access/verify-code", { email: useStore.email, code });
-    console.log("=== [verify-code] token recibido:", res.token);
-    useStore.token = res.token;
-    if (res.instructor) useStore.instructorData = res.instructor;
+    const res = await post("/complementary/access/verify-code", {
+      email: useStore.email,
+      code,
+    });
+
+    const isAdmin = ["COORDINADOR", "PROGRAMADOR", "ADMIN"].includes(
+      useStore.getRole(),
+    );
+    if (isAdmin) {
+      useStore.complementaryToken = res.token;
+    } else {
+      useStore.token = res.token;
+      if (res.instructor) useStore.instructorData = res.instructor;
+    }
+
     clearTimers();
     state.value = "CODE_VERIFIED";
-    notifySuccessRequest("Acceso a complementarias concedido");
-    setTimeout(() => router.push("/home/complementarias"), 3000);
+
+    const isPlanningRedirect =
+      router.currentRoute.value.query.redirect === "planning";
+    notifySuccessRequest(
+      isPlanningRedirect
+        ? "Acceso a planeación concedido"
+        : "Acceso a complementarias concedido",
+    );
+
+    const redirectPath = isPlanningRedirect
+      ? "/planning-dashboard"
+      : "/home/complementarias";
+    setTimeout(() => router.push(redirectPath), 3000);
   } catch (err) {
-    console.log("=== [verify-code] Error ===", err?.response?.data);
     const msg =
       err?.response?.data?.msg || "Código incorrecto. Intenta de nuevo.";
     codeError.value = msg;
@@ -234,32 +295,29 @@ async function verifyCode() {
   }
 }
 
-// ─── Inputs OTP ───────────────────────────────────────────────────────────────
-// Avanza al siguiente campo al escribir; al completar los 6 dígitos verifica automáticamente
 function onOtpInput(val, i) {
   otpDigits.value[i] = val ? val.slice(-1) : "";
   if (otpDigits.value[i] && i < 5) otpRefs.value[i + 1]?.focus();
   if (otpDigits.value.every((d) => d !== "")) verifyCode();
 }
 
-// Retrocede al campo anterior si el actual está vacío
 function onBackspace(i) {
   if (!otpDigits.value[i] && i > 0) otpRefs.value[i - 1]?.focus();
 }
 
-// ─── Contadores ───────────────────────────────────────────────────────────────
 function startResendCountdown() {
   resendCountdown.value = 30;
   resendTimer = setInterval(() => {
-    if (--resendCountdown.value <= 0) clearInterval(resendTimer);
+    resendCountdown.value -= 1;
+    if (resendCountdown.value <= 0) clearInterval(resendTimer);
   }, 1000);
 }
 
-// Al expirar el código regresa al estado inicial para que el instructor lo reenvíe
 function startExpiryCountdown() {
   expiryCountdown.value = 300;
   expiryTimer = setInterval(() => {
-    if (--expiryCountdown.value <= 0) {
+    expiryCountdown.value -= 1;
+    if (expiryCountdown.value <= 0) {
       clearTimers();
       codeError.value = "";
       state.value = "DOC_VERIFIED";
@@ -272,7 +330,6 @@ function clearTimers() {
   clearInterval(expiryTimer);
 }
 
-// ─── Utilidades ───────────────────────────────────────────────────────────────
 function maskEmail(email) {
   const [user, domain] = email.split("@");
   return `${user.slice(0, 3)}****@${domain}`;
@@ -288,20 +345,12 @@ onUnmounted(clearTimers);
 </script>
 
 <style scoped>
-.save_as {
-  font-size: 18px;
-  background-color: var(--color_button);
-  color: var(--color_text_button);
-}
-
 .otp-input {
   width: 48px;
 }
-
 .otp-input :deep(.q-field__control) {
   justify-content: center;
 }
-
 .otp-input :deep(input) {
   text-align: center;
   font-size: 20px;

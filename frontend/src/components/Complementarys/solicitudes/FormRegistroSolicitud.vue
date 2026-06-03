@@ -1,0 +1,1153 @@
+<template>
+  <q-form ref="formRef" @submit.prevent="enviarFormulario" novalidate>
+
+    <!-- Encabezado: fecha, hora y N° consecutivo -->
+    <div class="row q-col-gutter-md q-mb-md">
+      <div class="col-12 col-sm-4">
+        <q-input v-model="formData.fechaRegistro" type="date" outlined readonly bg-color="grey-3" color="green-9" label="Fecha de registro">
+          <template v-slot:prepend><q-icon name="today" /></template>
+        </q-input>
+      </div>
+      <div class="col-12 col-sm-4">
+        <q-input v-model="formData.horaRegistro" outlined readonly bg-color="grey-3" color="green-9" label="Hora de registro">
+          <template v-slot:prepend><q-icon name="access_time" /></template>
+        </q-input>
+      </div>
+      <div class="col-12 col-sm-4">
+        <q-input v-model="formData.numeroSolicitud" outlined readonly bg-color="green-1" color="green-9" label="N° Consecutivo">
+          <template v-slot:prepend><q-icon name="confirmation_number" color="green-9" /></template>
+        </q-input>
+      </div>
+    </div>
+
+    <!-- ═══ CÓDIGOS IMPORTANTES ═══ -->
+    <q-card flat bordered class="q-mb-md section-card">
+      <div class="section-header row items-center q-px-md q-py-sm cursor-pointer" @click="toggleSection('sofia')">
+        <q-icon name="qr_code_2" color="green-9" size="20px" class="q-mr-sm" />
+        <div class="text-green-9 text-weight-bold text-uppercase col" style="font-size: 18px">Códigos importantes</div>
+        <q-icon :name="collapsed.sofia ? 'chevron_right' : 'expand_more'" color="green-9" size="20px" />
+      </div>
+      <q-separator color="green-3" />
+      <div v-show="!collapsed.sofia" class="q-pa-md">
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-sm-6">
+            <q-input v-model="formData.codigoSolicitud" outlined readonly bg-color="green-1" color="green-9"
+              label="N° de solicitud" placeholder="Generado al guardar">
+              <template v-slot:prepend><q-icon name="confirmation_number" color="green-9" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-6">
+            <q-input v-model="formData.fichaCaracterizacion" outlined readonly bg-color="grey-3" color="green-9" label="Ficha de caracterización">
+              <template v-slot:prepend><q-icon name="description" /></template>
+            </q-input>
+          </div>
+        </div>
+      </div>
+    </q-card>
+
+    <!-- ═══ SECCIÓN 1: DATOS DEL PROGRAMA ═══ -->
+    <q-card flat bordered class="q-mb-md section-card">
+      <div class="section-header row items-center q-px-md q-py-sm cursor-pointer"
+        @click="toggleSection('datosPrograma')">
+        <q-icon name="description" color="green-9" size="20px" class="q-mr-sm" />
+        <div class="text-green-9 text-weight-bold text-uppercase col" style="font-size: 18px">Datos del programa</div>
+        <q-icon :name="collapsed.datosPrograma ? 'chevron_right' : 'expand_more'" color="green-9" size="20px" />
+      </div>
+      <q-separator color="green-3" />
+      <div v-show="!collapsed.datosPrograma" class="q-pa-md">
+
+        <!-- Curso confirmado -->
+        <q-input v-if="formData.prfCodigo"
+          :model-value="formData.prfDenominacion || formData.prfCodigo"
+          outlined readonly bg-color="grey-3" color="green-9" label="Curso confirmado">
+          <template v-slot:prepend><q-icon name="menu_book" /></template>
+          <template v-if="!props.readonly" v-slot:append>
+            <q-btn unelevated round icon="close" color="red-6" size="sm" @click="limpiarCursoConfirmado">
+              <q-tooltip>Cambiar curso</q-tooltip>
+            </q-btn>
+          </template>
+        </q-input>
+
+        <!-- Banner: sin curso seleccionado -->
+        <q-banner v-if="!formData.prfCodigo" dense rounded class="bg-green-1 text-green-9">
+          <template v-slot:avatar><q-icon name="info" color="green-9" /></template>
+          Ve al <strong>Catálogo</strong>, abre el curso que necesitas y haz clic en
+          <strong>Confirmar curso</strong> para continuar el registro.
+        </q-banner>
+
+        <!-- Código del curso + Versión -->
+        <div class="row q-col-gutter-md q-mt-sm">
+          <div class="col-12 col-sm-6">
+            <q-input v-model="formData.prfCodigo" outlined readonly bg-color="grey-3" color="green-9" label="Código del curso">
+              <template v-slot:prepend><q-icon name="tag" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-6">
+            <q-input v-model="formData.prfVersion" outlined readonly bg-color="grey-3" color="green-9" label="Versión">
+              <template v-slot:prepend><q-icon name="numbers" /></template>
+            </q-input>
+          </div>
+        </div>
+
+        <!-- N° aprendices + Duración -->
+        <div class="row q-col-gutter-md q-mt-sm">
+          <div class="col-12 col-sm-6">
+            <q-input v-model.number="formData.numAprendices" type="number" outlined
+              color="green-9" label="N° de aprendices" :min="1" :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="groups" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-6">
+            <q-input v-model="formData.prfDuracionMaxima" outlined readonly bg-color="grey-3" color="green-9" label="Duración en horas">
+              <template v-slot:prepend><q-icon name="schedule" /></template>
+            </q-input>
+          </div>
+        </div>
+
+        <!-- Tipo de programa + Tipo de población (solo coordinador/programador) -->
+        <div v-if="esCoorOProgramador" class="row q-col-gutter-md q-mt-sm">
+          <div class="col-12 col-sm-6">
+            <q-select v-model="formData.tipoPrograma" :options="OPCIONES_TIPO_PROGRAMA"
+              outlined color="green-9" label="Tipo de programa" :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="category" /></template>
+            </q-select>
+          </div>
+          <div class="col-12 col-sm-6">
+            <q-select v-model="formData.tipoPoblacion" :options="OPCIONES_TIPO_POBLACION"
+              outlined color="green-9" label="Tipo de población atendida" :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="diversity_3" /></template>
+            </q-select>
+          </div>
+        </div>
+
+      </div>
+    </q-card>
+
+    <!-- ═══ SECCIÓN 2: DATOS DEL INSTRUCTOR ═══ -->
+    <q-card flat bordered class="q-mb-md section-card">
+      <div class="section-header row items-center q-px-md q-py-sm cursor-pointer"
+        @click="toggleSection('instructor')">
+        <q-icon name="person" color="green-9" size="20px" class="q-mr-sm" />
+        <div class="text-green-9 text-weight-bold text-uppercase col" style="font-size: 18px">Datos del instructor</div>
+        <q-icon :name="collapsed.instructor ? 'chevron_right' : 'expand_more'" color="green-9" size="20px" />
+      </div>
+      <q-separator color="green-3" />
+      <div v-show="!collapsed.instructor" class="q-pa-md">
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-sm-6">
+            <q-input v-model="formData.nombreInstructor" outlined readonly bg-color="grey-3" color="green-9" label="Nombre instructor(a)">
+              <template v-slot:prepend><q-icon name="person" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-6">
+            <q-input v-model="formData.cedulaInstructor" outlined readonly bg-color="grey-3" color="green-9" label="Cédula instructor(a)">
+              <template v-slot:prepend><q-icon name="badge" /></template>
+            </q-input>
+          </div>
+        </div>
+        <div class="row q-col-gutter-md q-mt-sm">
+          <div class="col-12 col-sm-4">
+            <q-input v-model="formData.telefonoInstructor" outlined readonly bg-color="grey-3" color="green-9" label="Teléfono instructor(a)">
+              <template v-slot:prepend><q-icon name="call" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-4">
+            <q-input v-model="formData.correoInstructor" outlined readonly bg-color="grey-3" color="green-9" label="Correo institucional">
+              <template v-slot:prepend><q-icon name="mail" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-4">
+            <q-input v-model="formData.correoPersonalInstructor" outlined readonly bg-color="grey-3" color="green-9" label="Correo personal">
+              <template v-slot:prepend><q-icon name="mail_outline" /></template>
+            </q-input>
+          </div>
+        </div>
+      </div>
+    </q-card>
+
+    <!-- ═══ SECCIÓN 3: UBICACIÓN ═══ -->
+    <q-card flat bordered class="q-mb-md section-card">
+      <div class="section-header row items-center q-px-md q-py-sm cursor-pointer"
+        @click="toggleSection('ubicacion')">
+        <q-icon name="location_on" color="green-9" size="20px" class="q-mr-sm" />
+        <div class="text-green-9 text-weight-bold text-uppercase col" style="font-size: 18px">Ubicación</div>
+        <q-icon :name="collapsed.ubicacion ? 'chevron_right' : 'expand_more'" color="green-9" size="20px" />
+      </div>
+      <q-separator color="green-3" />
+      <div v-show="!collapsed.ubicacion" class="q-pa-md">
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-sm-6">
+            <q-select
+              v-model="formData.municipio"
+              :options="municipiosOptions"
+              :loading="loadingMunicipios"
+              emit-value map-options
+              use-input input-debounce="300"
+              outlined color="green-9" label="Municipio de ejecución"
+              :disable="props.loading || props.readonly"
+              no-error-icon
+            >
+              <template v-slot:prepend><q-icon name="location_on" /></template>
+              <template v-slot:no-option>
+                <q-item><q-item-section class="text-grey">Sin resultados</q-item-section></q-item>
+              </template>
+            </q-select>
+          </div>
+          <div class="col-12 col-sm-6">
+            <q-input v-model="formData.vereda" outlined color="green-9" label="Vereda / Corregimiento"
+              :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="nature" /></template>
+            </q-input>
+          </div>
+        </div>
+        <div class="q-mt-sm">
+          <q-input v-model="formData.direccion" outlined color="green-9" label="Dirección donde se impartirá el curso"
+            :disable="props.loading || props.readonly">
+            <template v-slot:prepend><q-icon name="home" /></template>
+          </q-input>
+        </div>
+        <div class="q-mt-sm">
+          <q-select
+            v-model="formData.supervisor"
+            :options="supervisoresOptions"
+            emit-value map-options
+            outlined color="green-9" label="Supervisor (coordinador responsable)"
+            :disable="props.loading || props.readonly || supervisoresOptions.length === 0"
+            :hint="supervisoresOptions.length === 0 ? 'Sin supervisores disponibles' : ''"
+            clearable
+          >
+            <template v-slot:prepend><q-icon name="supervisor_account" /></template>
+          </q-select>
+        </div>
+        <div class="q-mt-sm">
+          <q-select
+            v-model="formData.campesena"
+            :options="campesenaOptions"
+            emit-value map-options
+            outlined color="green-9" label="Campesena"
+            :disable="props.loading || props.readonly || campesenaOptions.length === 0"
+            :hint="campesenaOptions.length === 0 ? 'Sin campesenas disponibles' : ''"
+            clearable
+          >
+            <template v-slot:prepend><q-icon name="grass" /></template>
+          </q-select>
+        </div>
+      </div>
+    </q-card>
+
+    <!-- ═══ SECCIÓN 4: DATOS DE LA EMPRESA ═══ -->
+    <q-card flat bordered class="q-mb-md section-card">
+      <div class="section-header row items-center q-px-md q-py-sm cursor-pointer"
+        @click="toggleSection('empresa')">
+        <q-icon name="business" color="green-9" size="20px" class="q-mr-sm" />
+        <div class="text-green-9 text-weight-bold text-uppercase col" style="font-size: 18px">Datos de la empresa</div>
+        <q-icon :name="collapsed.empresa ? 'chevron_right' : 'expand_more'" color="green-9" size="20px" />
+      </div>
+      <q-separator color="green-3" />
+      <div v-show="!collapsed.empresa" class="q-pa-md">
+        <div class="q-mb-sm">
+          <q-input v-model="formData.nombreEmpresa" outlined color="green-9" label="Nombre de la empresa"
+            :disable="props.loading || props.readonly">
+            <template v-slot:prepend><q-icon name="business" /></template>
+          </q-input>
+        </div>
+        <div class="row q-col-gutter-md q-mt-sm">
+          <div class="col-12 col-sm-4">
+            <q-input v-model="formData.nitEmpresa" type="number" maxlength="10" outlined color="green-9" label="NIT"
+              :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="badge" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-4">
+            <q-input v-model="formData.contactoEmpresa" outlined color="green-9" label="Nombre contacto empresa"
+              :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="person" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-4">
+            <q-input v-model="formData.telefonoEmpresa" type="number" outlined color="green-9" label="Teléfono de contacto"
+              :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="call" /></template>
+            </q-input>
+          </div>
+        </div>
+      </div>
+    </q-card>
+
+    <!-- ═══ SECCIÓN 5: FECHAS DEL PROGRAMA ═══ -->
+    <q-card v-if="!props.hideFechas || props.readonly" flat bordered class="q-mb-md section-card">
+      <div class="section-header row items-center q-px-md q-py-sm cursor-pointer"
+        @click="toggleSection('fechas')">
+        <q-icon name="event" color="green-9" size="20px" class="q-mr-sm" />
+        <div class="text-green-9 text-weight-bold text-uppercase col" style="font-size: 18px">Fechas del programa</div>
+        <q-icon :name="collapsed.fechas ? 'chevron_right' : 'expand_more'" color="green-9" size="20px" />
+      </div>
+      <q-separator color="green-3" />
+      <div v-show="!collapsed.fechas" class="q-pa-md">
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-sm-4">
+            <q-input v-model="formData.fechaInscripcion" type="date" outlined color="green-9" label="Fecha de inscripción"
+              :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="assignment_turned_in" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-4">
+            <q-input v-model="formData.fechaMatriculaInicio" type="date" outlined color="green-9" label="Inicio de matrícula"
+              :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="how_to_reg" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-4">
+            <q-input v-model="formData.fechaMatriculaFin" type="date" outlined color="green-9" label="Fin de matrícula"
+              :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="how_to_reg" /></template>
+            </q-input>
+          </div>
+        </div>
+      </div>
+    </q-card>
+
+    <!-- ═══ SECCIÓN 6: PROGRAMACIÓN DE SESIONES ═══ -->
+    <q-card flat bordered class="q-mb-md section-card">
+      <div class="section-header row items-center q-px-md q-py-sm cursor-pointer"
+        @click="toggleSection('sesiones')">
+        <q-icon name="date_range" color="green-9" size="20px" class="q-mr-sm" />
+        <div class="text-green-9 text-weight-bold text-uppercase col" style="font-size: 18px">Programación de la ficha</div>
+        <q-icon :name="collapsed.sesiones ? 'chevron_right' : 'expand_more'" color="green-9" size="20px" />
+      </div>
+      <q-separator color="green-3" />
+      <div v-show="!collapsed.sesiones" class="q-pa-md">
+
+        <!-- Fechas de inicio y fin del programa -->
+        <div class="row q-col-gutter-md q-mb-md">
+          <div class="col-12 col-sm-6">
+            <q-input v-model="formData.fechaInicio" type="date" outlined color="green-9" label="Fecha de inicio"
+              :min="fechaInicioMin" :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="event" /></template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-6">
+            <q-input v-model="formData.fechaFin" type="date" outlined color="green-9" label="Fecha de finalización"
+              :min="formData.fechaInicio" :disable="props.loading || props.readonly">
+              <template v-slot:prepend><q-icon name="event" /></template>
+            </q-input>
+          </div>
+        </div>
+
+        <!-- MODO VISTA: tabla de sesiones -->
+        <template v-if="props.readonly">
+          <div v-if="!sesionesVista.length" class="q-mb-md">
+            <q-banner dense rounded class="bg-grey-2 text-grey-7">
+              <template v-slot:avatar><q-icon name="event_busy" /></template>
+              Sin sesiones programadas
+            </q-banner>
+          </div>
+          <div v-else class="row q-col-gutter-md q-mb-sm">
+            <div class="col-12 col-sm-6">
+              <table class="sess-view-table">
+                <thead><tr><th>N°</th><th>Fecha</th><th>H. Inicio</th><th>H. Fin</th><th>Horas</th></tr></thead>
+                <tbody>
+                  <tr v-for="(s, i) in sesionesColumnaIzq" :key="i" :class="i % 2 === 0 ? 'row-even' : 'row-odd'">
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ s.fecha || '—' }}</td>
+                    <td>{{ s.horaInicio || '—' }}</td>
+                    <td>{{ s.horaFin || '—' }}</td>
+                    <td>{{ s.totalHoras || 0 }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-if="sesionesColumnaDer.length" class="col-12 col-sm-6">
+              <table class="sess-view-table">
+                <thead><tr><th>N°</th><th>Fecha</th><th>H. Inicio</th><th>H. Fin</th><th>Horas</th></tr></thead>
+                <tbody>
+                  <tr v-for="(s, i) in sesionesColumnaDer" :key="i" :class="i % 2 === 0 ? 'row-even' : 'row-odd'">
+                    <td>{{ sesionesColumnaIzq.length + i + 1 }}</td>
+                    <td>{{ s.fecha || '—' }}</td>
+                    <td>{{ s.horaInicio || '—' }}</td>
+                    <td>{{ s.horaFin || '—' }}</td>
+                    <td>{{ s.totalHoras || 0 }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+
+        <!-- MODO EDICIÓN: calendario interactivo -->
+        <template v-else>
+          <div class="row items-center q-mb-md q-gutter-sm">
+            <q-btn outline color="green-9" icon="add" label="Agregar sesión"
+              :disable="props.loading" @click="abrirDialogSesion(null)" />
+            <q-btn outline color="green-9" icon="event_repeat" label="Programación general"
+              :disable="props.loading" @click="dialogProgGeneral = true" />
+            <q-space />
+            <q-badge color="green-9" class="q-px-md q-py-xs" style="font-size: 14px">
+              {{ sesiones.length }} sesiones programadas
+            </q-badge>
+          </div>
+          <div class="calendar-wrapper">
+            <FullCalendar ref="calendarRef" class="text-uppercase" :options="calendarOptions">
+              <template v-slot:eventContent="arg">
+                <div class="event-content">
+                  <div class="event-hours">
+                    <q-icon name="schedule" size="10px" class="q-mr-xs" />{{ arg.event.extendedProps.totalHoras }}h
+                  </div>
+                  <div class="event-time">
+                    {{ arg.event.extendedProps.horaInicio }} – {{ arg.event.extendedProps.horaFin }}
+                  </div>
+                </div>
+              </template>
+            </FullCalendar>
+          </div>
+        </template>
+
+        <!-- Totalizadores (siempre visibles) -->
+        <div class="row justify-end q-mt-md q-gutter-x-lg text-weight-bold">
+          <div class="text-grey-7">Horas del curso: <span class="text-black">{{ formData.prfDuracionMaxima || 0 }}</span></div>
+          <div class="text-green-9">Horas programadas: <span class="text-black">{{ totalHorasProgramadas }}</span></div>
+          <div :class="faltanHoras > 0 ? 'text-orange-9' : faltanHoras < 0 ? 'text-red-9' : 'text-green-9'">
+            {{ faltanHoras > 0 ? 'Faltan' : faltanHoras < 0 ? 'Excede' : 'Completo' }}:
+            <span class="text-black">{{ Math.abs(faltanHoras) }} h</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Dialog: Agregar / Editar sesión -->
+      <q-dialog v-model="dialogSesion" persistent>
+        <q-card style="width: 420px; max-width: 90vw">
+          <q-card-section class="bg-green-9 q-px-lg q-py-sm">
+            <h5 class="q-mt-sm q-mb-sm text-white text-center text-weight-bold">
+              {{ editandoSesion !== null ? 'EDITAR SESIÓN' : 'NUEVA SESIÓN' }}
+            </h5>
+          </q-card-section>
+          <q-card-section class="q-pa-md q-pt-lg">
+            <q-input v-model="sesionForm.fecha" type="date" outlined color="green-9" label="Fecha *"
+              :disable="props.loading"
+              :min="formData.fechaInicio || undefined"
+              :max="formData.fechaFin || undefined"
+              :rules="[
+                (val) => (val && val.length > 0) || 'La fecha es obligatoria',
+              ]" lazy-rules>
+              <template v-slot:prepend><q-icon name="event" /></template>
+            </q-input>
+            <div class="row q-col-gutter-md q-mt-md">
+              <div class="col-6">
+                <q-input
+                  :model-value="horaToNum(sesionForm.horaInicio)"
+                  @update:model-value="v => sesionForm.horaInicio = numToHora(v)"
+                  type="number" :min="0" :max="23"
+                  outlined color="green-9" label="Hora inicio (0–23)"
+                  suffix=":00" :disable="props.loading"
+                  :rules="[(val) => (val !== '' && val !== null) || 'Requerido']" lazy-rules>
+                  <template v-slot:prepend><q-icon name="schedule" /></template>
+                </q-input>
+              </div>
+              <div class="col-6">
+                <q-input
+                  :model-value="horaToNum(sesionForm.horaFin)"
+                  @update:model-value="v => sesionForm.horaFin = numToHora(v)"
+                  type="number" :min="0" :max="23"
+                  outlined color="green-9" label="Hora fin (0–23)"
+                  suffix=":00" :disable="props.loading"
+                  :rules="[
+                    (val) => (val !== '' && val !== null) || 'Requerido',
+                    (val) => !sesionForm.horaInicio || parseInt(val) > horaToNum(sesionForm.horaInicio) || 'Posterior al inicio'
+                  ]" lazy-rules>
+                  <template v-slot:prepend><q-icon name="schedule" /></template>
+                </q-input>
+              </div>
+            </div>
+            <div v-if="sesionForm.horaInicio && sesionForm.horaFin && calcularHoras(sesionForm.horaInicio, sesionForm.horaFin) > 0"
+              class="text-center q-mt-md q-pa-sm bg-green-1 rounded-borders">
+              <div class="text-subtitle1 text-green-9 text-weight-bold">
+                {{ calcularHoras(sesionForm.horaInicio, sesionForm.horaFin) }} horas
+              </div>
+              <div class="text-caption text-grey-7">{{ sesionForm.horaInicio }} → {{ sesionForm.horaFin }}</div>
+            </div>
+          </q-card-section>
+          <q-card-actions align="center" class="q-pb-lg">
+            <q-btn v-if="editandoSesion !== null" label="ELIMINAR" flat color="red-7"
+              icon="delete" :disable="props.loading" @click="eliminarSesion" />
+            <q-btn v-if="editandoSesion !== null" label="DUPLICAR" flat color="blue-7"
+              icon="content_copy" :disable="props.loading" @click="duplicarSesion" />
+            <q-btn label="CANCELAR" flat color="grey-7" v-close-popup :disable="props.loading" />
+            <q-btn label="GUARDAR" class="save_as q-mx-sm" :disable="props.loading" @click="guardarSesion" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Dialog: Programación general -->
+      <q-dialog v-model="dialogProgGeneral" persistent>
+        <q-card style="width: 520px; max-width: 95vw">
+          <q-card-section class="bg-green-9 q-px-lg q-py-sm">
+            <h5 class="q-mt-sm q-mb-sm text-white text-center text-weight-bold">PROGRAMACIÓN GENERAL</h5>
+          </q-card-section>
+          <q-card-section class="q-pa-lg q-pb-sm">
+            <div class="row q-col-gutter-md">
+              <div class="col-6">
+                <q-input v-model="progForm.fechaDesde" type="date" outlined color="green-9" label="Desde *"
+                  :min="formData.fechaInicio || undefined"
+                  :max="formData.fechaFin || undefined">
+                  <template v-slot:prepend><q-icon name="event" /></template>
+                </q-input>
+              </div>
+              <div class="col-6">
+                <q-input v-model="progForm.fechaHasta" type="date" outlined color="green-9" label="Hasta *"
+                  :min="progForm.fechaDesde || formData.fechaInicio || undefined"
+                  :max="formData.fechaFin || undefined">
+                  <template v-slot:prepend><q-icon name="event" /></template>
+                </q-input>
+              </div>
+            </div>
+            <div class="q-mt-md">
+              <div class="text-caption text-grey-7 q-mb-sm">Días de la semana *</div>
+              <div class="row q-gutter-sm justify-center">
+                <q-btn
+                  v-for="dia in DIAS_SEMANA" :key="dia.val"
+                  :label="dia.label"
+                  :color="progForm.dias.includes(dia.val) ? 'green-9' : 'grey-4'"
+                  :text-color="progForm.dias.includes(dia.val) ? 'white' : 'grey-8'"
+                  size="sm" unelevated
+                  @click="toggleDia(dia.val)"
+                />
+              </div>
+            </div>
+            <div class="row q-col-gutter-md q-mt-md">
+              <div class="col-6">
+                <q-input
+                  :model-value="horaToNum(progForm.horaInicio)"
+                  @update:model-value="v => progForm.horaInicio = numToHora(v)"
+                  type="number" :min="0" :max="23"
+                  outlined color="green-9" label="Hora inicio (0–23)" suffix=":00">
+                  <template v-slot:prepend><q-icon name="schedule" /></template>
+                </q-input>
+              </div>
+              <div class="col-6">
+                <q-input
+                  :model-value="horaToNum(progForm.horaFin)"
+                  @update:model-value="v => progForm.horaFin = numToHora(v)"
+                  type="number" :min="0" :max="23"
+                  outlined color="green-9" label="Hora fin (0–23)" suffix=":00">
+                  <template v-slot:prepend><q-icon name="schedule" /></template>
+                </q-input>
+              </div>
+            </div>
+            <div v-if="progForm.horaInicio && progForm.horaFin"
+              class="text-center q-mt-sm text-caption text-green-9">
+              {{ calcularHoras(progForm.horaInicio, progForm.horaFin) }} horas por sesión
+              <span v-if="progForm.fechaDesde && progForm.fechaHasta && progForm.dias.length">
+                · {{ sesionesAGenerar }} sesiones a crear
+              </span>
+            </div>
+          </q-card-section>
+          <q-card-actions align="center" class="q-pb-lg">
+            <q-btn label="CANCELAR" flat color="grey-7" @click="cerrarProgGeneral" />
+            <q-btn label="GENERAR SESIONES" class="save_as q-mx-sm" icon="event_repeat"
+              :disable="!progFormValido" @click="generarSesiones" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+    </q-card>
+
+    <!-- ═══ SECCIÓN 7: FORMACIÓN ═══ -->
+    <q-card flat bordered class="q-mb-md section-card">
+      <div class="section-header row items-center q-px-md q-py-sm cursor-pointer"
+        @click="toggleSection('formacion')">
+        <q-icon name="school" color="green-9" size="20px" class="q-mr-sm" />
+        <div class="text-green-9 text-weight-bold text-uppercase col" style="font-size: 18px">Formación</div>
+        <q-icon :name="collapsed.formacion ? 'chevron_right' : 'expand_more'" color="green-9" size="20px" />
+      </div>
+      <q-separator color="green-3" />
+      <div v-show="!collapsed.formacion" class="q-pa-md">
+        <div class="q-mb-sm">
+          <q-input v-model="formData.competencies" type="textarea" outlined color="green-9" label="Competencias"
+            :disable="props.loading || props.readonly" autogrow>
+            <template v-slot:prepend><q-icon name="verified" /></template>
+          </q-input>
+        </div>
+        <div class="q-mt-sm">
+          <q-input v-model="formData.outcomes" type="textarea" outlined color="green-9" label="Resultados de aprendizaje"
+            :disable="props.loading || props.readonly" autogrow>
+            <template v-slot:prepend><q-icon name="checklist_rtl" /></template>
+          </q-input>
+        </div>
+        <div class="q-mt-sm">
+          <q-input v-model="formData.learningActivity" type="textarea" outlined color="green-9" label="Actividad de aprendizaje"
+            :disable="props.loading || props.readonly" autogrow>
+            <template v-slot:prepend><q-icon name="edit_note" /></template>
+          </q-input>
+        </div>
+        <div class="q-mt-sm">
+          <q-input v-model="formData.recursosNecesarios" type="textarea" outlined color="green-9" label="Recursos necesarios"
+            :disable="props.loading || props.readonly" autogrow>
+            <template v-slot:prepend><q-icon name="inventory" /></template>
+          </q-input>
+        </div>
+      </div>
+    </q-card>
+
+    <!-- ═══ SECCIÓN 8: REQUISITOS DE INGRESO ═══ -->
+    <q-card flat bordered class="q-mb-md section-card">
+      <div class="section-header row items-center q-px-md q-py-sm cursor-pointer"
+        @click="toggleSection('requisitos')">
+        <q-icon name="checklist" color="green-9" size="20px" class="q-mr-sm" />
+        <div class="text-green-9 text-weight-bold text-uppercase col" style="font-size: 18px">Requisitos de ingreso</div>
+        <q-badge v-if="requisitosLista.length" color="green-9" :label="requisitosLista.length" class="q-mr-sm" />
+        <q-icon :name="collapsed.requisitos ? 'chevron_right' : 'expand_more'" color="green-9" size="20px" />
+      </div>
+      <q-separator color="green-3" />
+      <div v-show="!collapsed.requisitos" class="q-pa-md">
+        <div v-if="requisitosLista.length" class="row q-col-gutter-sm">
+          <div v-for="(req, i) in requisitosLista" :key="i" class="col-12 col-sm-6">
+            <div class="req-chip">
+              <q-icon name="check_circle" color="green-7" size="18px" class="q-mr-sm flex-shrink-0" />
+              <span>{{ req }}</span>
+            </div>
+          </div>
+        </div>
+        <q-banner v-else dense rounded class="bg-grey-2 text-grey-7">
+          <template v-slot:avatar><q-icon name="info" color="grey-6" /></template>
+          Los requisitos de ingreso se cargan automáticamente al confirmar el curso desde el catálogo.
+        </q-banner>
+      </div>
+    </q-card>
+
+    <!-- Nota legal -->
+    <div class="text-caption text-grey-6 q-px-md q-mb-md">
+      La firma de este formato refleja que se han validado los requisitos de idoneidad del instructor
+      según el diseño curricular y la información del usuario según guía procedimiento de ingreso
+      GFPI-G-025 (núm. 7.5)
+    </div>
+
+    <!-- ═══ BOTONES DE ACCIÓN ═══ -->
+    <div v-if="!props.readonly" class="row justify-end q-gutter-sm q-mt-md q-mb-lg">
+      <q-btn label="PREVISUALIZAR PDF" icon="picture_as_pdf" class="button_style"
+        :disable="props.loading" @click="previsualizarPdf" />
+      <q-btn label="GUARDAR SOLICITUD" icon="save" type="submit" class="button_style"
+        :loading="props.loading" :disable="props.loading">
+        <template v-slot:loading>
+          <q-spinner-oval color="white" size="1em" />
+        </template>
+      </q-btn>
+    </div>
+
+  </q-form>
+</template>
+
+<script setup>
+import { ref, computed, watch, onMounted, onActivated, nextTick } from "vue"
+import FullCalendar      from "@fullcalendar/vue3"
+import dayGridPlugin     from "@fullcalendar/daygrid"
+import interactionPlugin from "@fullcalendar/interaction"
+import esLocale          from "@fullcalendar/core/locales/es"
+import { generateSolicitudPdf } from "../../../utils/generateSolicitudPdf.js"
+import { get } from "../../../services/api.js"
+import { useQuasar } from "quasar"
+import { storeUser } from "../../../store/users.js"
+
+const $q = useQuasar()
+const userStore = storeUser()
+const esCoorOProgramador = computed(() =>
+  ["COORDINADOR", "PROGRAMADOR"].includes(userStore.getRole())
+)
+
+const props = defineProps({
+  modelValue:    { type: Object,  required: true },
+  loading:       { type: Boolean, default: false },
+  environments:  { type: Array,   default: () => [] },
+  readonly:      { type: Boolean, default: false },
+  coordinadores: { type: Array,   default: () => [] },
+  hideFechas:    { type: Boolean, default: false },
+  supervisores:  { type: Array,   default: () => [] },
+  campesenas:    { type: Array,   default: () => [] },
+})
+
+const emit = defineEmits(["update:modelValue", "submit", "limpiarCurso"])
+
+// ─── Constantes ───────────────────────────────────────────────────────────────
+const OPCIONES_TIPO_PROGRAMA = [
+  "ATENCIÓN A INSTITUCIONES", "FORMACIÓN ESPECIAL MIPYMES-PND", "CAMPSENA",
+  "CAMPSENA - AULA MÓVIL", "CAMPSENA RADIAL", "PROGRAMA DE BILINGÜISMO",
+  "FULL POPULAR", "FULL POPULAR - AULA MÓVIL", "POSCONFLICTO", "AULA MÓVIL", "INPEC",
+]
+
+const OPCIONES_TIPO_POBLACION = [
+  "Empresa", "Demanda social", "Emprendedores", "Convenio Universidad",
+  "Remitidos por el CIE", "Apoyo a otros Centros", "Microempresarios",
+]
+
+const DIAS_SEMANA = [
+  { val: 1, label: "Lun" }, { val: 2, label: "Mar" }, { val: 3, label: "Mié" },
+  { val: 4, label: "Jue" }, { val: 5, label: "Vie" }, { val: 6, label: "Sáb" }, { val: 0, label: "Dom" },
+]
+
+// ─── Estado local (copia del modelValue para binding directo en el template) ──
+const formRef  = ref(null)
+const formData = ref({ ...props.modelValue })
+const sesiones = ref([...(props.modelValue.sesiones || [])])
+
+let _syncingFromParent = false
+
+watch(() => props.modelValue, (val) => {
+  _syncingFromParent = true
+  formData.value = { ...val }
+  sesiones.value = [...(val.sesiones || [])]
+  nextTick(() => { _syncingFromParent = false })
+}, { deep: true })
+
+watch(formData, (val) => {
+  if (_syncingFromParent) return
+  emit("update:modelValue", { ...val, sesiones: sesiones.value })
+}, { deep: true })
+
+watch(sesiones, () => {
+  if (_syncingFromParent) return
+  emit("update:modelValue", { ...formData.value, sesiones: sesiones.value })
+}, { deep: true })
+
+// ─── Municipios de Santander ─────────────────────────────────────────────────
+const municipiosOptions  = ref([])
+const loadingMunicipios  = ref(false)
+
+async function loadMunicipios() {
+  loadingMunicipios.value = true
+  try {
+    const data = await get("/towns/towns/SANTANDER")
+    municipiosOptions.value = Array.isArray(data)
+      ? data.map(m => ({ label: m.name, value: m.name }))
+      : []
+  } catch {
+    municipiosOptions.value = []
+  } finally {
+    loadingMunicipios.value = false
+  }
+}
+
+onMounted(loadMunicipios)
+
+// ─── Secciones colapsables ────────────────────────────────────────────────────
+const collapsed = ref({
+  datosPrograma: false,
+  instructor:    false,
+  ubicacion:     false,
+  empresa:       false,
+  fechas:        false,
+  sesiones:      false,
+  formacion:     false,
+  requisitos:    false,
+  sofia:         true,
+})
+
+function toggleSection(section) {
+  collapsed.value[section] = !collapsed.value[section]
+}
+
+// ─── Computeds ────────────────────────────────────────────────────────────────
+const requisitosLista = computed(() => {
+  const text = formData.value.requisitosIngreso
+  if (!text) return []
+  return text.split(/[\n\t]+/).map(r => r.trim()).filter(r => r.length > 0)
+})
+
+const coordinadoresOptions = computed(() =>
+  Array.isArray(props.coordinadores)
+    ? props.coordinadores.map(c => ({ label: c.name, value: c._id }))
+    : []
+)
+
+const supervisoresOptions = computed(() =>
+  Array.isArray(props.supervisores)
+    ? props.supervisores.map(s => ({ label: s.name, value: s._id }))
+    : []
+)
+
+const campesenaOptions = computed(() =>
+  Array.isArray(props.campesenas)
+    ? props.campesenas.map(c => ({ label: c.nombre, value: c._id }))
+    : []
+)
+
+const fechaInicioMin = computed(() => {
+  const d = new Date()
+  let restantes = 2
+  while (restantes > 0) {
+    d.setDate(d.getDate() + 1)
+    if (d.getDay() !== 0) restantes--
+  }
+  return d.toISOString().slice(0, 10)
+})
+
+// ─── FullCalendar ─────────────────────────────────────────────────────────────
+const calendarRef = ref(null)
+
+watch(() => collapsed.value.sesiones, (isCollapsed) => {
+  if (!isCollapsed) nextTick(() => calendarRef.value?.getApi()?.updateSize())
+})
+
+onActivated(() => {
+  nextTick(() => calendarRef.value?.getApi()?.updateSize())
+})
+
+function limpiarCursoConfirmado() {
+  $q.dialog({
+    title: "Cambiar curso",
+    message: "¿Está seguro de cambiar el curso? Se limpiarán los datos del curso y las sesiones programadas.",
+    cancel: { label: "Cancelar", flat: true, color: "grey-7" },
+    ok:     { label: "Sí, cambiar", color: "green-9" },
+    persistent: true,
+  }).onOk(() => {
+    formData.value.catalogCourse     = ""
+    formData.value.prfCodigo         = ""
+    formData.value.prfVersion        = ""
+    formData.value.prfDuracionMaxima = null
+    formData.value.requisitosIngreso = ""
+    sesiones.value = []
+    emit("limpiarCurso")
+    nextTick(() => calendarRef.value?.getApi()?.updateSize())
+  })
+}
+
+const calendarOptions = computed(() => {
+  let validRange = undefined
+  if (formData.value.fechaInicio && formData.value.fechaFin) {
+    const endD = new Date(formData.value.fechaFin + 'T00:00:00')
+    endD.setDate(endD.getDate() + 1)
+    validRange = { start: formData.value.fechaInicio, end: endD.toISOString().slice(0, 10) }
+  }
+  return {
+    plugins: [dayGridPlugin, interactionPlugin],
+    locale: esLocale,
+    initialView: "dayGridMonth",
+    selectable: !props.readonly,
+    editable: !props.readonly,
+    eventDurationEditable: false,
+    headerToolbar: { left: "prev,next today", center: "title", right: "" },
+    events: [],
+    eventClick: handleEventClick,
+    eventDrop:  handleEventDrop,
+    dateClick:  handleDateClick,
+    aspectRatio: 2.5,
+    ...(validRange ? { validRange } : {}),
+  }
+})
+
+const eventosCalendario = computed(() =>
+  sesiones.value.map((s, i) => ({
+    id:              String(i),
+    title:           `${s.totalHoras}h`,
+    start:           s.fecha,
+    backgroundColor: "#4caf50",
+    borderColor:     "#388e3c",
+    textColor:       "#ffffff",
+    extendedProps:   { horaInicio: s.horaInicio, horaFin: s.horaFin, totalHoras: s.totalHoras },
+  }))
+)
+
+function cargarEventosEnCalendario() {
+  const api = calendarRef.value?.getApi()
+  if (!api) return
+  api.removeAllEvents()
+  eventosCalendario.value.forEach(e => api.addEvent(e))
+}
+
+watch(eventosCalendario, cargarEventosEnCalendario)
+watch(calendarRef, (cal) => { if (cal) nextTick(cargarEventosEnCalendario) })
+
+function handleDateClick(info) {
+  if (props.readonly) return
+  sesionForm.value    = { fecha: info.dateStr, horaInicio: "", horaFin: "" }
+  editandoSesion.value = null
+  dialogSesion.value  = true
+}
+
+function handleEventClick(info) {
+  if (props.loading || props.readonly) return
+  const index = parseInt(info.event.id)
+  if (isNaN(index) || index >= sesiones.value.length) return
+  const s = sesiones.value[index]
+  sesionForm.value    = { fecha: s.fecha, horaInicio: s.horaInicio, horaFin: s.horaFin }
+  editandoSesion.value = index
+  dialogSesion.value  = true
+}
+
+function handleEventDrop(info) {
+  const index = parseInt(info.event.id)
+  if (isNaN(index) || index >= sesiones.value.length) { info.revert(); return }
+  const newFecha = info.event.startStr.slice(0, 10)
+  if (formData.value.fechaInicio && newFecha < formData.value.fechaInicio) {
+    info.revert()
+    $q.notify({ type: 'negative', icon: 'event_busy', message: 'La sesión debe estar dentro del rango del programa', position: 'top', timeout: 3000 })
+    return
+  }
+  if (formData.value.fechaFin && newFecha > formData.value.fechaFin) {
+    info.revert()
+    $q.notify({ type: 'negative', icon: 'event_busy', message: 'La sesión debe estar dentro del rango del programa', position: 'top', timeout: 3000 })
+    return
+  }
+  if (newFecha < hoy.value) {
+    info.revert()
+    $q.notify({ type: 'negative', icon: 'event_busy', message: 'No se puede mover una sesión a una fecha pasada', position: 'top', timeout: 3000 })
+    return
+  }
+  sesiones.value[index].fecha = newFecha
+  sesiones.value.sort((a, b) => a.fecha.localeCompare(b.fecha))
+}
+
+// ─── Programación general ─────────────────────────────────────────────────────
+const dialogProgGeneral = ref(false)
+const progForm = ref({ fechaDesde: "", fechaHasta: "", dias: [], horaInicio: "", horaFin: "" })
+
+function toggleDia(val) {
+  const idx = progForm.value.dias.indexOf(val)
+  if (idx === -1) progForm.value.dias.push(val)
+  else progForm.value.dias.splice(idx, 1)
+}
+
+const sesionesAGenerar = computed(() => {
+  const { fechaDesde, fechaHasta, dias } = progForm.value
+  if (!fechaDesde || !fechaHasta || !dias.length) return 0
+  let count = 0
+  const cur = new Date(fechaDesde + "T00:00:00")
+  const fin = new Date(fechaHasta + "T00:00:00")
+  while (cur <= fin) { if (dias.includes(cur.getDay())) count++; cur.setDate(cur.getDate() + 1) }
+  return count
+})
+
+const progFormValido = computed(() => {
+  const { fechaDesde, fechaHasta, dias, horaInicio, horaFin } = progForm.value
+  return fechaDesde && fechaHasta && fechaHasta >= fechaDesde &&
+    dias.length > 0 && horaInicio && horaFin && horaFin > horaInicio
+})
+
+function generarSesiones() {
+  if (!progFormValido.value) return
+  const { fechaDesde, fechaHasta, dias, horaInicio, horaFin } = progForm.value
+  const totalHoras = calcularHoras(horaInicio, horaFin)
+  const cur = new Date(fechaDesde + "T00:00:00")
+  const fin = new Date(fechaHasta + "T00:00:00")
+  while (cur <= fin) {
+    if (dias.includes(cur.getDay())) {
+      const fecha = cur.toISOString().slice(0, 10)
+      const dentroRango = (!formData.value.fechaInicio || fecha >= formData.value.fechaInicio) &&
+                          (!formData.value.fechaFin   || fecha <= formData.value.fechaFin)
+      if (dentroRango) {
+        const yaExiste = sesiones.value.some(s => s.fecha === fecha && s.horaInicio === horaInicio && s.horaFin === horaFin)
+        if (!yaExiste) sesiones.value.push({ fecha, horaInicio, horaFin, totalHoras })
+      }
+    }
+    cur.setDate(cur.getDate() + 1)
+  }
+  sesiones.value.sort((a, b) => a.fecha.localeCompare(b.fecha))
+  cerrarProgGeneral()
+}
+
+function cerrarProgGeneral() {
+  dialogProgGeneral.value = false
+  progForm.value = { fechaDesde: "", fechaHasta: "", dias: [], horaInicio: "", horaFin: "" }
+}
+
+// ─── Dialog de sesión individual ──────────────────────────────────────────────
+const dialogSesion   = ref(false)
+const editandoSesion = ref(null)
+const sesionForm     = ref({ fecha: "", horaInicio: "", horaFin: "" })
+
+function abrirDialogSesion(evento) {
+  if (evento) {
+    sesionForm.value     = { fecha: evento.fecha, horaInicio: evento.horaInicio, horaFin: evento.horaFin }
+    editandoSesion.value = evento.index
+  } else {
+    sesionForm.value     = { fecha: "", horaInicio: "", horaFin: "" }
+    editandoSesion.value = null
+  }
+  dialogSesion.value = true
+}
+
+function calcularHoras(hInicio, hFin) {
+  if (!hInicio || !hFin) return 0
+  const [h1, m1] = hInicio.split(":").map(Number)
+  const [h2, m2] = hFin.split(":").map(Number)
+  if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) return 0
+  const mins = (h2 * 60 + m2) - (h1 * 60 + m1)
+  return mins > 0 ? parseFloat((mins / 60).toFixed(2)) : 0
+}
+
+const horaToNum = (h) => h ? (parseInt(h) || 0) : 0
+const numToHora = (v) => `${String(Math.max(0, Math.min(23, parseInt(v) || 0))).padStart(2, '0')}:00`
+
+function eliminarSesion() {
+  $q.dialog({
+    title: "Eliminar sesión",
+    message: "¿Está seguro de eliminar esta sesión?",
+    cancel: { label: "Cancelar", flat: true, color: "grey-7" },
+    ok:     { label: "Eliminar", color: "red-7", unelevated: true },
+    persistent: true,
+  }).onOk(() => {
+    if (editandoSesion.value !== null) sesiones.value.splice(editandoSesion.value, 1)
+    dialogSesion.value   = false
+    editandoSesion.value = null
+    sesionForm.value     = { fecha: "", horaInicio: "", horaFin: "" }
+  })
+}
+
+function guardarSesion() {
+  const f = sesionForm.value
+  if (!f.fecha || !f.horaInicio || !f.horaFin) return
+  if (f.horaFin <= f.horaInicio) return
+
+  if (formData.value.fechaInicio && f.fecha < formData.value.fechaInicio) {
+    $q.notify({ type: 'negative', icon: 'event_busy', message: 'La sesión debe estar dentro del rango del programa', position: 'top', timeout: 3000 })
+    return
+  }
+  if (formData.value.fechaFin && f.fecha > formData.value.fechaFin) {
+    $q.notify({ type: 'negative', icon: 'event_busy', message: 'La sesión debe estar dentro del rango del programa', position: 'top', timeout: 3000 })
+    return
+  }
+
+  const overlap = sesiones.value.some((s, idx) =>
+    idx !== editandoSesion.value &&
+    s.fecha === f.fecha &&
+    !(f.horaFin <= s.horaInicio || f.horaInicio >= s.horaFin)
+  )
+  if (overlap) {
+    $q.notify({ type: 'negative', icon: 'schedule', message: 'Existe solapamiento de horario en ese día', position: 'top', timeout: 3000 })
+    return
+  }
+
+  const total = calcularHoras(f.horaInicio, f.horaFin)
+  const durMax = formData.value.prfDuracionMaxima
+  if (durMax) {
+    const otrasHoras = sesiones.value.reduce((sum, s, idx) => idx !== editandoSesion.value ? sum + (s.totalHoras || 0) : sum, 0)
+    if (otrasHoras + total > durMax) {
+      $q.notify({ type: 'negative', icon: 'schedule', message: `Agregar esta sesión superaría las ${durMax}h del curso`, position: 'top', timeout: 3500 })
+      return
+    }
+  }
+
+  const data = { fecha: f.fecha, horaInicio: f.horaInicio, horaFin: f.horaFin, totalHoras: total }
+  if (editandoSesion.value !== null) {
+    sesiones.value[editandoSesion.value] = data
+  } else {
+    sesiones.value.push(data)
+    sesiones.value.sort((a, b) => a.fecha.localeCompare(b.fecha))
+  }
+  dialogSesion.value   = false
+  sesionForm.value     = { fecha: "", horaInicio: "", horaFin: "" }
+  editandoSesion.value = null
+}
+
+function duplicarSesion() {
+  const { horaInicio, horaFin } = sesionForm.value
+  dialogSesion.value   = false
+  sesionForm.value     = { fecha: "", horaInicio, horaFin }
+  editandoSesion.value = null
+  dialogSesion.value   = true
+}
+
+// ─── Fecha mínima y totalizadores ────────────────────────────────────────────
+const hoy = computed(() => new Date().toISOString().slice(0, 10))
+
+const totalHorasProgramadas = computed(() =>
+  sesiones.value.reduce((sum, s) => sum + (s.totalHoras || 0), 0)
+)
+
+const faltanHoras = computed(() =>
+  (formData.value.prfDuracionMaxima || 0) - totalHorasProgramadas.value
+)
+
+// ─── Columnas para tabla de sesiones (modo readonly) ──────────────────────────
+const sesionesVista = computed(() =>
+  sesiones.value.length ? sesiones.value : (formData.value.sesiones || [])
+)
+
+const sesionesColumnaIzq = computed(() => {
+  const mid = Math.ceil(sesionesVista.value.length / 2)
+  return sesionesVista.value.slice(0, mid)
+})
+
+const sesionesColumnaDer = computed(() => {
+  const mid = Math.ceil(sesionesVista.value.length / 2)
+  return sesionesVista.value.slice(mid)
+})
+
+// ─── PDF y envío ─────────────────────────────────────────────────────────────
+async function previsualizarPdf() {
+  await generateSolicitudPdf({ ...formData.value, sesiones: [...sesiones.value] })
+}
+
+function updateCalendarSize() {
+  nextTick(() => calendarRef.value?.getApi()?.updateSize())
+}
+
+defineExpose({ updateCalendarSize })
+
+function enviarFormulario() {
+  const durMax = formData.value.prfDuracionMaxima
+  if (durMax && sesiones.value.length > 0) {
+    if (totalHorasProgramadas.value > durMax) {
+      $q.notify({ type: 'negative', icon: 'schedule',
+        message: `Las sesiones superan las ${durMax}h del curso (programadas: ${totalHorasProgramadas.value}h).`,
+        position: 'top', timeout: 4500 })
+      return
+    }
+    if (totalHorasProgramadas.value < durMax) {
+      $q.notify({ type: 'warning', icon: 'schedule',
+        message: `Faltan ${faltanHoras.value} hora(s). Las sesiones deben cubrir las ${durMax}h del curso.`,
+        position: 'top', timeout: 4500 })
+      return
+    }
+  }
+  const payload = { ...formData.value, sesiones: [...sesiones.value] }
+  delete payload.proyectoAsociado
+  delete payload.idCampesena
+  delete payload.rutaCampesena
+  delete payload.supervisorNombre
+  payload.competencies = payload.competencies
+    ? payload.competencies.split(/\n+/).map(s => s.trim()).filter(Boolean) : []
+  payload.outcomes = payload.outcomes
+    ? payload.outcomes.split(/\n+/).map(s => s.trim()).filter(Boolean) : []
+  emit("submit", payload)
+}
+</script>
+
+<style scoped>
+.section-card { border-radius: 8px; }
+.section-header { background-color: #e8f5e9; transition: background 0.2s; }
+.section-header:hover { background-color: #c8e6c9; }
+.save_as     { font-size: 18px; background-color: var(--color_button); color: var(--color_text_button); }
+.button_style { background-color: var(--color_button); color: var(--color_text_button); }
+.calendar-wrapper { width: 100%; min-height: 425px; }
+
+/* ── Eventos del calendario ───────────────────────────────────────────────── */
+.event-content { padding: 2px 5px; cursor: grab; display: flex; flex-direction: column; gap: 1px; }
+.event-content:active { cursor: grabbing; }
+.event-hours  { font-size: 11px; font-weight: 700; line-height: 1.3; display: flex; align-items: center; }
+.event-time   { font-size: 9px; opacity: 0.88; line-height: 1.2; }
+
+:deep(.fc-event)          { border-radius: 6px !important; box-shadow: 0 1px 4px rgba(0,0,0,0.18) !important; transition: opacity 0.15s, box-shadow 0.15s !important; }
+:deep(.fc-event:hover)    { opacity: 0.88; box-shadow: 0 3px 8px rgba(56,142,60,0.35) !important; }
+:deep(.fc-event.fc-event-dragging) { opacity: 0.7; box-shadow: 0 6px 16px rgba(56,142,60,0.4) !important; }
+:deep(.fc-daygrid-event)  { margin-top: 2px !important; }
+
+/* ── Requisitos ───────────────────────────────────────────────────────────── */
+.req-chip {
+  display: flex;
+  align-items: flex-start;
+  background-color: #f1f8e9;
+  border: 1px solid #c5e1a5;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 16px;
+  color: #212121;
+  line-height: 1.4;
+}
+
+/* ── Tabla de sesiones (modo readonly) ────────────────────────────────────── */
+.sess-view-table          { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sess-view-table thead tr { background-color: #2e7d32; color: #fff; }
+.sess-view-table th       { padding: 7px 8px; text-align: center; font-weight: 700; font-size: 12px; letter-spacing: 0.3px; }
+.sess-view-table td       { padding: 6px 8px; text-align: center; border: 1px solid #c8e6c9; }
+.sess-view-table .row-even td { background-color: #f9fbe7; }
+.sess-view-table .row-odd  td { background-color: #fff; }
+</style>

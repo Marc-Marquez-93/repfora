@@ -203,12 +203,20 @@ function buildReqs(texto) {
   ).join("")}</div>`
 }
 
-function buildSessions(sesiones, durMax) {
-  const total  = sesiones.reduce((s, x) => s + (x.totalHoras || 0), 0)
-  const faltan = Math.max(0, (durMax || 0) - total)
+function buildSessions(sesiones, durMax, fechaInicio, fechaFin) {
+  const total = sesiones.reduce((s, x) => s + (x.totalHoras || 0), 0)
+  const diff  = (durMax || 0) - total
+  const colorDiff = diff > 0 ? '#e65100' : diff < 0 ? '#c62828' : C.headerBg
+  const labelDiff = diff > 0 ? 'Faltan' : diff < 0 ? 'Excede' : 'Completo'
+
+  const encabezadoFechas = (fechaInicio || fechaFin) ? `
+    <div style="display:flex;gap:32px;padding:8px 14px;background:${C.labelBg};border-bottom:1px solid ${C.border};font-size:11px;">
+      <div><strong style="color:${C.headerBg}">Fecha de inicio:</strong> ${fechaInicio || '—'}</div>
+      <div><strong style="color:${C.headerBg}">Fecha de finalización:</strong> ${fechaFin || '—'}</div>
+    </div>` : ''
 
   if (!sesiones.length)
-    return `<p style="padding:10px 14px; color:#aaa; font-size:11px; text-align:center;">Sin sesiones programadas</p>`
+    return encabezadoFechas + `<p style="padding:10px 14px; color:#aaa; font-size:11px; text-align:center;">Sin sesiones programadas</p>`
 
   const mid = Math.ceil(sesiones.length / 2)
   const cols = [sesiones.slice(0, mid), sesiones.slice(mid)]
@@ -234,25 +242,35 @@ function buildSessions(sesiones, durMax) {
   }
 
   return `
+    ${encabezadoFechas}
     <div class="sess-wrap">
       <div class="sess-col">${colHtml(cols[0], 0)}</div>
       <div class="sess-col">${colHtml(cols[1], mid)}</div>
     </div>
     <div class="sess-total">
-      <div><span>Total horas programadas: </span><strong>${total}</strong></div>
-      <div><span style="color:${faltan > 0 ? '#e65100' : C.sub}">Faltan horas: </span>
-           <strong style="color:${faltan > 0 ? '#e65100' : C.headerBg}">${faltan}</strong></div>
+      <div><span>Horas del curso: </span><strong>${durMax || 0}</strong></div>
+      <div><span>Horas programadas: </span><strong>${total}</strong></div>
+      <div><span style="color:${colorDiff}">${labelDiff}: </span>
+           <strong style="color:${colorDiff}">${Math.abs(diff)}</strong></div>
     </div>`
 }
 
 // ─── HTML completo ─────────────────────────────────────────────────────────────
 function buildHtml(d, logoSrc) {
-  const empresa = d.tipoPoblacion === "Empresa" ? sec("DATOS DE LA EMPRESA", dt2Rows([
-    ["Nombre empresa",  d.nombreEmpresa],
-    ["NIT",            d.nitEmpresa],
-    ["Contacto",       d.contactoEmpresa],
-    ["Teléfono",       d.telefonoEmpresa],
-  ])) : ""
+  const empresa = sec("DATOS DE LA EMPRESA", dt2Rows([
+    ["Nombre empresa", d.nombreEmpresa],
+    ["NIT",           d.nitEmpresa],
+    ["Contacto",      d.contactoEmpresa],
+    ["Teléfono",      d.telefonoEmpresa],
+  ]))
+
+  const fechasPrograma = (d.fechaInscripcion || d.fechaMatriculaInicio || d.fechaMatriculaFin)
+    ? sec("FECHAS DEL PROGRAMA", dt2Rows([
+        ["Fecha de inscripción", d.fechaInscripcion],
+        ["Inicio de matrícula",  d.fechaMatriculaInicio],
+        ["Fin de matrícula",     d.fechaMatriculaFin],
+      ]))
+    : ""
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>${css}</style></head><body><div class="wrap">
@@ -271,63 +289,52 @@ function buildHtml(d, logoSrc) {
         ${logoSrc ? `<img src="${logoSrc}" alt="SENA" />` : `<div style="font-size:24px;font-weight:900;color:${C.headerBg};">SENA</div>`}
       </div>
     </div>
+    <!-- Encabezado: fecha / hora / consecutivo | códigos importantes -->
     <div class="inst-meta">
-      <span><strong>Fecha de registro:</strong> ${d.fechaRegistro || "—"} &nbsp;|&nbsp; <strong>Hora:</strong> ${d.horaRegistro || "—"}</span>
-      <span><strong>Código:</strong> ${d.codigoSolicitud || "Pendiente"} &nbsp;|&nbsp; <strong>Ficha:</strong> ${d.fichaCaracterizacion || "Pendiente"}</span>
+      <span><strong>Fecha:</strong> ${d.fechaRegistro || "—"} &nbsp;|&nbsp; <strong>Hora:</strong> ${d.horaRegistro || "—"} &nbsp;|&nbsp; <strong>N° Consecutivo:</strong> ${d.numeroSolicitud || "Pendiente"}</span>
+      <span><strong>N° Solicitud:</strong> ${d.codigoSolicitud || "Pendiente"} &nbsp;|&nbsp; <strong>Ficha:</strong> ${d.fichaCaracterizacion || "Pendiente"}</span>
     </div>
 
-    ${sec("CARACTERIZACIÓN DEL CURSO", dtRows([
-      ["Código del curso",    d.prfCodigo],
-      ["Denominación",       d.cursoDenominacion || d.prfCodigo],
+    ${sec("DATOS DEL PROGRAMA", dt2Rows([
+      ["Código del curso",   d.prfCodigo],
+      ["Denominación",       d.prfDenominacion || d.prfCodigo],
       ["Versión",            d.prfVersion],
       ["Duración en horas",  d.prfDuracionMaxima],
-    ]))}
-
-    ${sec("DATOS DEL PROGRAMA", dt2Rows([
       ["Tipo de programa",   d.tipoPrograma],
       ["N° de aprendices",   d.numAprendices],
       ["Tipo de población",  d.tipoPoblacion],
       ["Proyecto asociado",  d.proyectoAsociado],
     ]))}
 
-    ${sec("INSTRUCTOR", dt2Rows([
+    ${sec("DATOS DEL INSTRUCTOR", dt2Rows([
       ["Nombre",               d.nombreInstructor],
       ["Cédula",               d.cedulaInstructor],
       ["Teléfono",             d.telefonoInstructor],
       ["Correo institucional", d.correoInstructor],
       ["Correo personal",      d.correoPersonalInstructor],
-      ["",                     ""],
     ]))}
 
     ${sec("UBICACIÓN", dtRows([
-      ["Municipio",                d.municipio],
-      ["Vereda / Corregimiento",   d.vereda],
-      ["Dirección",                d.direccion],
+      ["Municipio",               d.municipio],
+      ["Vereda / Corregimiento",  d.vereda],
+      ["Dirección",               d.direccion],
+      ["Supervisor",              d.supervisorNombre],
     ]))}
 
     ${empresa}
 
-    ${sec("FECHAS DEL PROGRAMA", dt2Rows([
-      ["Fecha de inicio",        d.fechaInicio],
-      ["Fecha de finalización",  d.fechaFin],
-      ["Fecha de inscripción",   d.fechaInscripcion],
-      ["Inicio matrícula",       d.inicioMatricula],
-      ["Fin matrícula",          d.finMatricula],
+    ${sec("PROGRAMACIÓN DE LA FICHA", buildSessions(d.sesiones || [], d.prfDuracionMaxima, d.fechaInicio, d.fechaFin))}
+
+    ${sec("FORMACIÓN", dtRows([
+      ["Competencias",              Array.isArray(d.competencies) ? d.competencies.join("\n") : (d.competencies || "—")],
+      ["Resultados de aprendizaje", Array.isArray(d.outcomes)     ? d.outcomes.join("\n")     : (d.outcomes     || "—")],
+      ["Actividad de aprendizaje",  d.learningActivity],
+      ["Recursos necesarios",       d.recursosNecesarios],
     ]))}
 
     ${sec("REQUISITOS DE INGRESO", buildReqs(d.requisitosIngreso))}
 
-    ${sec("FORMACIÓN", dtRows([
-      ["Competencias",              d.competencias],
-      ["Resultados de aprendizaje", d.resultadosAprendizaje],
-      ["Actividad de aprendizaje",  d.actividadAprendizaje],
-      ["Recursos necesarios",       d.recursosNecesarios],
-    ]))}
-
-    ${sec("PROGRAMACIÓN DE LA FICHA", buildSessions(d.sesiones || [], d.prfDuracionMaxima))}
-
-    ${sec("AMBIENTE DE FORMACIÓN", dtRows([["Ambiente", d.ambienteFormacion]]))}
-
+    ${fechasPrograma}
 
   </div></body></html>`
 }
