@@ -14,7 +14,6 @@ import { complementaryScheduleHelper } from "../helpers/complementarySchedule.he
 import { calculateNumHoursWork } from "../utils/functions/dates.js";
 import { notifyApproval, notifyRejection, notifyFichaAssigned, notifyNewRequest, notifyCancellation, notifyScheduled, notifyResubmit } from "../services/complementaryNotificationService.js";
 import User from "../models/User.js";
-import ComplementaryCampesena from "../models/ComplementaryCampesena.js";
 import { jobStore } from "../utils/jobStore.js";
 
 const compCtrl = {};
