@@ -356,7 +356,21 @@ export const routes = [
     path: "/home/comites",
     name: "homeComites",
     component: () => import("../views/HomeComites.vue"),
-    meta: { rol: ["USER", "INSTRUCTOR"] },
+    meta: { rol: ["USER", "INSTRUCTOR", "NOVEDADES"] },
+    beforeEnter: auth,
+  },
+  {
+    path: "/home/comites/gestion",
+    name: "homeComitesGestion",
+    component: () => import("../views/HomeComitesGestion.vue"),
+    meta: { rol: ["NOVEDADES"] },
+    beforeEnter: auth,
+  },
+  {
+    path: "/home/comites/aprendices",
+    name: "homeComitesAprendices",
+    component: () => import("../views/HomeComitesAprendices.vue"),
+    meta: { rol: ["NOVEDADES"] },
     beforeEnter: auth,
   },
   {

@@ -1,5 +1,41 @@
 <template>
   <div>
+    <!-- ========== VISTA NOVEDADES: Dashboard con tarjetas ========== -->
+    <div v-if="isNovedades" class="comites-dashboard">
+      <BtnBack route="/home" />
+      <HeaderLayout title="Panel de Comités" />
+
+      <div class="dashboard-cards-container">
+        <div class="dashboard-card" @click="router.push('/home/comites/gestion')">
+          <div class="dashboard-card-icon">
+            <span class="material-symbols-outlined">groups</span>
+          </div>
+          <div class="dashboard-card-content">
+            <h3>Gestión de Comités</h3>
+            <p>Administra y gestiona los comités evaluadores</p>
+          </div>
+          <div class="dashboard-card-arrow">
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </div>
+        </div>
+
+        <div class="dashboard-card" @click="router.push('/home/comites/aprendices')">
+          <div class="dashboard-card-icon">
+            <span class="material-symbols-outlined">school</span>
+          </div>
+          <div class="dashboard-card-content">
+            <h3>Gestión de Aprendices</h3>
+            <p>Consulta y administra la información de aprendices</p>
+          </div>
+          <div class="dashboard-card-arrow">
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== VISTA INSTRUCTOR: Contenido original ========== -->
+    <div v-else>
     <!-- 1. Botón volver -->
     <BtnBack route="/home/instructor" />
 
@@ -622,6 +658,10 @@
                           filled
                           v-model="aprendizActual.noveltyType"
                           :options="noveltyTypeOptions"
+                          option-label="label"
+                          option-value="value"
+                          emit-value
+                          map-options
                           label="Tipo de Novedad *"
                           lazy-rules
                           :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
@@ -832,7 +872,7 @@
               </div>
               <div class="col-12 col-md-6">
                 <div class="text-weight-bold text-green-9">Estado:</div>
-                <div>{{ comiteSeleccionado.status }}</div>
+                <div>{{ getStatusLabel(comiteSeleccionado.status) }}</div>
               </div>
               <div class="col-12">
                 <div class="text-weight-bold text-green-9 q-mb-sm">Aprendices:</div>
@@ -846,7 +886,7 @@
                       <q-item-label caption>{{ learner.documentType }}: {{ learner.documentNumber }}</q-item-label>
                     </q-item-section>
                     <q-item-section side>
-                      <q-chip :label="learner.noveltyType" size="sm" :color="learner.noveltyType === 'ACADEMIC' ? 'orange' : learner.noveltyType === 'DISCIPLINARY' ? 'red' : 'purple'" />
+                      <q-chip :label="getNoveltyTypeLabel(learner.noveltyType)" size="sm" :color="learner.noveltyType === 'ACADEMIC' ? 'orange' : learner.noveltyType === 'DISCIPLINARY' ? 'red' : 'purple'" />
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -856,6 +896,8 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+    </div>
+    <!-- Fin de la vista instructor -->
   </div>
 </template>
 
@@ -866,9 +908,14 @@ import { useQuasar } from "quasar";
 import { get, post, put } from "../services/api.js";
 import BtnBack from "../layouts/btnBackLayout.vue";
 import HeaderLayout from "../layouts/headerViewsLayout.vue";
+import { storeUser } from "../store/users.js";
 
 const router = useRouter();
 const $q = useQuasar();
+const userStore = storeUser();
+
+// Determinar si el usuario es NOVEDADES
+const isNovedades = computed(() => userStore.getRole() === 'NOVEDADES');
 
 // Estados
 const prompt = ref(false);
@@ -916,7 +963,11 @@ const emailRef = ref(null);
 
 // Opciones
 const documentTypeOptions = ref(["CC", "CE", "TI", "PPT"]);
-const noveltyTypeOptions = ref(["ACADEMIC", "DISCIPLINARY", "BOTH"]);
+const noveltyTypeOptions = ref([
+  { label: "ACADÉMICA", value: "ACADEMIC" },
+  { label: "DISCIPLINARIA", value: "DISCIPLINARY" },
+  { label: "AMBAS", value: "BOTH" }
+]);
 const manualOptions = ref([
   "Artículo 45 - Falta Académica Leve",
   "Artículo 50 - Falta Disciplinaria Grave",
@@ -1239,6 +1290,21 @@ function formatDate(dateStr) {
   });
 }
 
+function getNoveltyTypeLabel(value) {
+  const option = noveltyTypeOptions.value.find(o => o.value === value);
+  return option ? option.label : value;
+}
+
+function getStatusLabel(status) {
+  const statusMap = {
+    PENDING: "PENDIENTE",
+    SCHEDULED: "PROGRAMADO",
+    COMPLETED: "COMPLETADO",
+    CANCELLED: "CANCELADO"
+  };
+  return statusMap[status] || status;
+}
+
 async function cargarComites() {
   try {
     const res = await get("/comites");
@@ -1284,5 +1350,145 @@ onMounted(() => {
 <style scoped>
 .hidden {
   display: none;
+}
+
+/* ========== Dashboard NOVEDADES ========== */
+.comites-dashboard {
+  padding: 16px;
+}
+
+.dashboard-cards-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 28px;
+  margin-top: 32px;
+  padding: 0 16px;
+}
+
+.dashboard-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 32px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(34, 139, 34, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #2e7d32, #66bb6a);
+  border-radius: 20px 0 0 20px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(46, 125, 50, 0.15), 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-color: rgba(46, 125, 50, 0.2);
+}
+
+.dashboard-card:hover::before {
+  opacity: 1;
+}
+
+.dashboard-card:active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.12);
+}
+
+.dashboard-card-icon {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #2e7d32, #43a047);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.dashboard-card:hover .dashboard-card-icon {
+  transform: scale(1.08);
+}
+
+.dashboard-card-icon .material-symbols-outlined {
+  font-size: 28px;
+  color: #ffffff;
+}
+
+.dashboard-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-card-content h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1b5e20;
+  letter-spacing: -0.01em;
+}
+
+.dashboard-card-content p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.dashboard-card-arrow {
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: all 0.3s ease;
+}
+
+.dashboard-card:hover .dashboard-card-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.dashboard-card-arrow .material-symbols-outlined {
+  font-size: 22px;
+  color: #2e7d32;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .dashboard-cards-container {
+    gap: 16px;
+    padding: 0 8px;
+  }
+
+  .dashboard-card {
+    padding: 20px 20px;
+    border-radius: 16px;
+  }
+
+  .dashboard-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+
+  .dashboard-card-icon .material-symbols-outlined {
+    font-size: 24px;
+  }
 }
 </style>

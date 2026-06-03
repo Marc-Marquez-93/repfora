@@ -132,6 +132,13 @@ const cards = ref([
     super: false,
   },
   {
+    title: "Comités",
+    route: "/home/comites",
+    image: "/images/reports2.jpg",
+    roles: ["NOVEDADES"],
+    super: false,
+  },
+  {
     title: "Auditoria Juicios",
     route: "/audit",
     image: "/images/audit.jpg",
