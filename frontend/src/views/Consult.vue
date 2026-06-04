@@ -15,6 +15,7 @@
       <div class="row justify-center flex">
         <div class="col-11 col-sm-3 q-px-md" v-if="opcion == 'ficha'">
           <q-select
+            ref="inputSelect"
             :disable="isLoadingData"
             filled
             v-model="fiche"
@@ -29,6 +30,7 @@
             @filter="filterFicha"
             lazy-rules
             :rules="[(val) => !!val || 'El campo es requerido']"
+            @keyup.enter="focusNextInput('fStart')"
           >
             <template v-slot:no-option>
               <q-item>
@@ -42,6 +44,7 @@
         </div>
         <div class="col-11 col-sm-3 q-px-md" v-if="opcion == 'instructor'">
           <q-select
+            ref="inputSelect"
             filled
             :disable="isLoadingData"
             v-model="inst"
@@ -55,6 +58,7 @@
             @filter="filterInstru"
             lazy-rules
             :rules="[(val) => !!val || 'El campo es requerido']"
+            @keyup.enter="focusNextInput('fStart')"
           >
             <template v-slot:no-option>
               <q-item>
@@ -68,6 +72,7 @@
         </div>
         <div class="col-11 col-sm-3 q-px-md" v-if="opcion == 'ambiente'">
           <q-select
+            ref="inputSelect"
             filled
             :disable="isLoadingData"
             v-model="environment"
@@ -81,6 +86,7 @@
             @filter="filterEnvi"
             lazy-rules
             :rules="[(val) => !!val || 'El campo es requerido']"
+            @keyup.enter="focusNextInput('fStart')"
           >
             <template v-slot:no-option>
               <q-item>
@@ -95,6 +101,7 @@
 
         <div class="col-11 col-sm-3 q-px-md">
           <q-input
+            ref="inputFStart"
             filled
             placeholder="aaaa/mm/dd"
             v-model="fStart"
@@ -103,6 +110,7 @@
             :rules="['date']"
             lazy-rules
             @update:model-value="clearDataCalender()"
+            @keyup.enter="focusNextInput('fEnd')"
           >
             <template v-slot:append>
               <q-icon name="event" class="cursor-pointer">
@@ -124,6 +132,7 @@
 
         <div class="col-11 col-sm-3 q-px-md">
           <q-input
+            ref="inputFEnd"
             filled
             placeholder="aaaa/mm/dd"
             v-model="fEnd"
@@ -132,6 +141,7 @@
             :rules="['date']"
             lazy-rules
             @update:model-value="clearDataCalender()"
+            @keyup.enter="getReport()"
           >
             <template v-slot:append>
               <q-icon name="event" class="cursor-pointer">
@@ -436,6 +446,20 @@ let filterInstructor = ref([]);
 let filterEnvironment = ref([]);
 let loadingData = ref(false);
 let print = ref(false);
+
+// Refs para navegación con Enter
+let inputSelect = ref();
+let inputFStart = ref();
+let inputFEnd = ref();
+
+// Función para navegar entre inputs con Enter
+function focusNextInput(target) {
+  if (target === 'fStart' && inputFStart.value) {
+    inputFStart.value.focus();
+  } else if (target === 'fEnd' && inputFEnd.value) {
+    inputFEnd.value.focus();
+  }
+}
 
 const router = useRouter();
 

@@ -32,25 +32,31 @@
 
         <q-card-section>
           <q-select
+            ref="inputRole"
             class="box_style q-my-md style-select"
             outlined
             v-model="role"
             :options="optionsRol"
             label="Rol"
+            @keyup.enter="focusNextInput('email')"
           />
           <div v-if="role.value === 'ADMIN'">
             <q-input
+              ref="inputEmail"
               class="box_style q-mb-md"
               outlined
               v-model="email"
               label="Usuario"
+              @keyup.enter="focusNextInput('password')"
             />
             <q-input
+              ref="inputPassword"
               class="box_style"
               v-model="password"
               outlined
               :type="isPwd ? 'password' : 'text'"
               label="Contraseña"
+              @keyup.enter="signIn()"
             >
               <template v-slot:append>
                 <q-icon
@@ -67,7 +73,6 @@
               class="button_style q-mt-md"
               :loading="loading"
               @click="signIn()"
-              ref="btnLogin"
               label="INICIAR SESIÓN"
             >
               <template v-slot:loading>
@@ -107,7 +112,9 @@ const userStore = storeUser();
 
 
 let router = useRouter();
-let btnLogin = ref();
+let inputRole = ref();
+let inputEmail = ref();
+let inputPassword = ref();
 let role = ref({ label: "CONSULTOR", value: "USER" });
 let email = ref();
 let password = ref("");
@@ -119,11 +126,14 @@ let optionsRol = [
 
 let loading = ref(false);
 
-window.addEventListener("keyup", (e) => {
-  if (e.key === "Enter") {
-    btnLogin.value.click();
+// Función para navegar entre inputs con Enter
+function focusNextInput(target) {
+  if (target === 'email' && inputEmail.value) {
+    inputEmail.value.focus();
+  } else if (target === 'password' && inputPassword.value) {
+    inputPassword.value.focus();
   }
-});
+}
 
 async function signIn() {
   loading.value = true;
