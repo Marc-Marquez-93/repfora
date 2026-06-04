@@ -9,7 +9,10 @@ const committeeCtrl = {};
 committeeCtrl.getCommittees = async (req, res) => {
   try {
     const committees = await Committee.find()
-      .populate("fiche")
+      .populate({
+        path: "fiche",
+        populate: { path: "program" }
+      })
       .populate("requestingInstructors")
       .populate("coordinator")
       .populate("invitedInstructors")
@@ -30,7 +33,10 @@ committeeCtrl.getCommitteeById = async (req, res) => {
 
   try {
     const committee = await Committee.findById(id)
-      .populate("fiche")
+      .populate({
+        path: "fiche",
+        populate: { path: "program" }
+      })
       .populate("requestingInstructors")
       .populate("coordinator")
       .populate("invitedInstructors")
@@ -210,6 +216,10 @@ committeeCtrl.getCommitteesByFiche = async (req, res) => {
 
   try {
     const committees = await Committee.find({ fiche: ficheId })
+      .populate({
+        path: "fiche",
+        populate: { path: "program" }
+      })
       .populate("requestingInstructors")
       .sort({ createdAt: -1 });
 
@@ -224,7 +234,10 @@ committeeCtrl.getCommitteesByFiche = async (req, res) => {
 committeeCtrl.getPendingCommittees = async (req, res) => {
   try {
     const committees = await Committee.find({ status: "PENDING" })
-      .populate("fiche")
+      .populate({
+        path: "fiche",
+        populate: { path: "program" }
+      })
       .populate("requestingInstructors")
       .sort({ createdAt: -1 });
 
@@ -239,7 +252,10 @@ committeeCtrl.getPendingCommittees = async (req, res) => {
 committeeCtrl.getScheduledCommittees = async (req, res) => {
   try {
     const committees = await Committee.find({ status: "SCHEDULED" })
-      .populate("fiche")
+      .populate({
+        path: "fiche",
+        populate: { path: "program" }
+      })
       .populate("requestingInstructors")
       .sort({ meetingDate: 1 });
 

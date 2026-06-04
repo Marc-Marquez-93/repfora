@@ -6,26 +6,19 @@
       <HeaderLayout title="Panel de Comités" />
 
       <div class="dashboard-cards-container">
-        <div class="dashboard-card" @click="router.push('/home/comites/gestion')">
+        <div
+          v-for="(card, index) in dashboardCards"
+          :key="card.title"
+          class="dashboard-card"
+          :style="{ animationDelay: `${index * 80}ms` }"
+          @click="router.push(card.route)"
+        >
           <div class="dashboard-card-icon">
-            <span class="material-symbols-outlined">groups</span>
+            <span class="material-symbols-outlined">{{ card.icon }}</span>
           </div>
           <div class="dashboard-card-content">
-            <h3>Gestión de Comités</h3>
-            <p>Administra y gestiona los comités evaluadores</p>
-          </div>
-          <div class="dashboard-card-arrow">
-            <span class="material-symbols-outlined">arrow_forward</span>
-          </div>
-        </div>
-
-        <div class="dashboard-card" @click="router.push('/home/comites/aprendices')">
-          <div class="dashboard-card-icon">
-            <span class="material-symbols-outlined">school</span>
-          </div>
-          <div class="dashboard-card-content">
-            <h3>Gestión de Aprendices</h3>
-            <p>Consulta y administra la información de aprendices</p>
+            <h3>{{ card.title }}</h3>
+            <p>{{ card.description }}</p>
           </div>
           <div class="dashboard-card-arrow">
             <span class="material-symbols-outlined">arrow_forward</span>
@@ -35,867 +28,978 @@
     </div>
 
     <!-- ========== VISTA INSTRUCTOR: Contenido original ========== -->
-    <div v-else>
-    <!-- 1. Botón volver -->
-    <BtnBack route="/home/instructor" />
+    <div v-else class="instructor-view">
+      <!-- 1. Botón volver -->
+      <BtnBack route="/home/instructor" />
 
-    <!-- 2. Título de sección -->
-    <HeaderLayout title="Gestión de Comités" />
+      <!-- 2. Título de sección -->
+      <HeaderLayout title="Gestión de Comités" />
 
-    <!-- 3. Barra superior: botón Crear -->
-    <div class="row justify-center q-mb-md">
-      <div class="col-sm-2 col-md-1 col-12 justify-center flex justify-sm-start">
-        <q-btn class="bg-green-9 text-white" @click="abrirDialogCrear">
-          <span class="material-symbols-outlined q-mr-sm" style="font-size: 20px">
-            add_circle
-          </span>
-          Crear
-        </q-btn>
+      <!-- 3. Barra superior: botón Crear -->
+      <div class="row justify-center q-mb-md">
+        <div class="col-sm-2 col-md-1 col-12 justify-center flex justify-sm-start">
+          <q-btn
+            class="bg-green-9 text-white btn-press"
+            @click="abrirDialogCrear"
+          >
+            <span class="material-symbols-outlined q-mr-sm" style="font-size: 20px">
+              add_circle
+            </span>
+            Crear
+          </q-btn>
+        </div>
       </div>
-    </div>
 
-    <!-- 4. Tabla de Comités -->
-    <div class="row q-mt-md">
-      <div class="col-12 q-mb-lg">
-        <q-table
-          flat
-          bordered
-          no-data-label="Sin registros aún"
-          :rows="comitesRows"
-          :columns="comitesColumns"
-          row-key="_id"
-          class="q-mx-md my-sticky-header-table"
-          rows-per-page-label="Numero de documentos"
-          :rows-per-page-options="[0]"
-          :pagination="{ rowsPerPage: 0 }"
-        >
-          <!-- Columna Ficha -->
-          <template v-slot:body-cell-ficha="props">
-            <q-td :props="props">
-              <div>
-                <span class="text-weight-bold text-green-9">{{ props.row.ficha }}</span>
-                <span class="q-ml-xs text-grey-7">- {{ props.row.nombrePrograma }}</span>
-              </div>
-            </q-td>
-          </template>
+      <!-- 4. Tabla de Comités -->
+      <div class="row q-mt-md">
+        <div class="col-12 q-mb-lg">
+          <q-table
+            flat
+            bordered
+            no-data-label="Sin registros aún"
+            :rows="comitesRows"
+            :columns="comitesColumns"
+            row-key="_id"
+            class="q-mx-md my-sticky-header-table comites-table"
+            rows-per-page-label="Numero de documentos"
+            :rows-per-page-options="[0]"
+            :pagination="{ rowsPerPage: 0 }"
+            :loading="loadingTable"
+          >
+            <!-- Columna Ficha -->
+            <template v-slot:body-cell-ficha="props">
+              <q-td :props="props">
+                <div class="ficha-cell">
+                  <span class="text-weight-bold text-green-9">{{ props.row.ficha }}</span>
+                  <span class="q-ml-xs text-grey-7">- {{ props.row.nombrePrograma }}</span>
+                </div>
+              </q-td>
+            </template>
 
-          <!-- Columna Fecha Creación -->
-          <template v-slot:body-cell-fechaCreacion="props">
-            <q-td :props="props">
-              <div v-if="props.row.createdAt">
-                {{ formatDate(props.row.createdAt) }}
-              </div>
-              <div v-else class="text-grey-5">N/A</div>
-            </q-td>
-          </template>
+            <!-- Columna Fecha Creación -->
+            <template v-slot:body-cell-fechaCreacion="props">
+              <q-td :props="props">
+                <div v-if="props.row.createdAt" class="date-cell">
+                  {{ formatDate(props.row.createdAt) }}
+                </div>
+                <div v-else class="text-grey-5">N/A</div>
+              </q-td>
+            </template>
 
-          <!-- Columna Fecha Agendamiento -->
-          <template v-slot:body-cell-fechaAgendamiento="props">
-            <q-td :props="props">
-              <div>
-                <span v-if="props.row.meetingDate">{{ formatDate(props.row.meetingDate) }}</span>
-                <span v-else class="text-grey-5">Pendiente</span>
-              </div>
-            </q-td>
-          </template>
+            <!-- Columna Fecha Agendamiento -->
+            <template v-slot:body-cell-fechaAgendamiento="props">
+              <q-td :props="props">
+                <div class="date-cell">
+                  <span v-if="props.row.meetingDate">{{ formatDate(props.row.meetingDate) }}</span>
+                  <span v-else class="text-grey-5">Pendiente</span>
+                </div>
+              </q-td>
+            </template>
 
-          <!-- Columna ID Comité -->
-          <template v-slot:body-cell-idComite="props">
-            <q-td :props="props">
-              <div class="text-caption text-grey-7">
-                COM-{{ String(props.row._id).slice(-6).toUpperCase() }}
-              </div>
-            </q-td>
-          </template>
+            <!-- Columna ID Comité -->
+            <template v-slot:body-cell-idComite="props">
+              <q-td :props="props">
+                <div class="id-cell">
+                  COM-{{ String(props.row._id).slice(-6).toUpperCase() }}
+                </div>
+              </q-td>
+            </template>
 
-          <!-- Columna Estado -->
-          <template v-slot:body-cell-estado="props">
-            <q-td :props="props">
-              <div>
-                <q-badge v-if="props.row.status === 'COMPLETED'" class="bg-green-10">
-                  COMPLETADO
-                </q-badge>
-                <q-badge v-else-if="props.row.status === 'SCHEDULED'" class="bg-green-10">
-                  PROGRAMADO
-                </q-badge>
-                <q-badge v-else-if="props.row.status === 'PENDING'" class="bg-grey-5">
-                  PENDIENTE
-                </q-badge>
-                <q-badge v-else class="bg-red">
-                  CANCELADO
-                </q-badge>
-              </div>
-            </q-td>
-          </template>
+            <!-- Columna Estado -->
+            <template v-slot:body-cell-estado="props">
+              <q-td :props="props">
+                <div>
+                  <q-badge v-if="props.row.status === 'COMPLETED'" class="bg-green-10 status-badge">
+                    COMPLETADO
+                  </q-badge>
+                  <q-badge v-else-if="props.row.status === 'SCHEDULED'" class="bg-green-10 status-badge">
+                    PROGRAMADO
+                  </q-badge>
+                  <q-badge v-else-if="props.row.status === 'PENDING'" class="bg-grey-5 status-badge">
+                    PENDIENTE
+                  </q-badge>
+                  <q-badge v-else class="bg-red status-badge">
+                    CANCELADO
+                  </q-badge>
+                </div>
+              </q-td>
+            </template>
 
-          <!-- Columna Acciones -->
-          <template v-slot:body-cell-acciones="props">
-            <q-td :props="props">
-              <div class="row q-gutter-xs justify-end">
-                <!-- Ver Datos -->
-                <q-btn
-                  round
-                  size="xs"
-                  color="green-10"
-                  icon="visibility"
-                  @click="verDatos(props.row)"
+            <!-- Columna Acciones -->
+            <template v-slot:body-cell-acciones="props">
+              <q-td :props="props">
+                <div class="row q-gutter-xs justify-end">
+                  <!-- Ver Datos -->
+                  <q-btn
+                    round
+                    size="xs"
+                    color="green-10"
+                    icon="visibility"
+                    class="action-btn btn-press"
+                    @click="verDatos(props.row)"
+                  >
+                    <q-tooltip>Ver datos del comité</q-tooltip>
+                  </q-btn>
+
+                  <!-- Cancelar (solo pendientes) -->
+                  <q-btn
+                    v-if="props.row.status === 'PENDING'"
+                    round
+                    size="xs"
+                    color="red"
+                    icon="cancel"
+                    class="action-btn btn-press"
+                    @click="cancelarComite(props.row)"
+                  >
+                    <q-tooltip>Cancelar comité</q-tooltip>
+                  </q-btn>
+                </div>
+              </q-td>
+            </template>
+
+            <!-- Template para filas con animación stagger -->
+            <template v-slot:body="props">
+              <q-tr
+                :props="props"
+                class="table-row-animate"
+                :style="{ animationDelay: `${props.rowIndex * 40}ms` }"
+              >
+                <!-- Renderizar celdas con sus slots personalizados -->
+                <q-td
+                  v-for="col in props.cols"
+                  :key="col.name"
+                  :props="props"
                 >
-                  <q-tooltip>Ver datos del comité</q-tooltip>
-                </q-btn>
-
-                <!-- Cancelar (solo pendientes) -->
-                <q-btn
-                  v-if="props.row.status === 'PENDING'"
-                  round
-                  size="xs"
-                  color="red"
-                  icon="cancel"
-                  @click="cancelarComite(props.row)"
-                >
-                  <q-tooltip>Cancelar comité</q-tooltip>
-                </q-btn>
-              </div>
-            </q-td>
-          </template>
-        </q-table>
+                  <!-- Usar slot específico si existe, sino valor por defecto -->
+                  <template v-if="col.name === 'ficha'">
+                    <div class="ficha-cell">
+                      <span class="text-weight-bold text-green-9">{{ props.row.ficha }}</span>
+                      <span class="q-ml-xs text-grey-7">- {{ props.row.nombrePrograma }}</span>
+                    </div>
+                  </template>
+                  <template v-else-if="col.name === 'fechaCreacion'">
+                    <div v-if="props.row.createdAt" class="date-cell">
+                      {{ formatDate(props.row.createdAt) }}
+                    </div>
+                    <div v-else class="text-grey-5">N/A</div>
+                  </template>
+                  <template v-else-if="col.name === 'fechaAgendamiento'">
+                    <div class="date-cell">
+                      <span v-if="props.row.meetingDate">{{ formatDate(props.row.meetingDate) }}</span>
+                      <span v-else class="text-grey-5">Pendiente</span>
+                    </div>
+                  </template>
+                  <template v-else-if="col.name === 'idComite'">
+                    <div class="id-cell">
+                      COM-{{ String(props.row._id).slice(-6).toUpperCase() }}
+                    </div>
+                  </template>
+                  <template v-else-if="col.name === 'estado'">
+                    <div>
+                      <q-badge v-if="props.row.status === 'COMPLETED'" class="bg-green-10 status-badge">
+                        COMPLETADO
+                      </q-badge>
+                      <q-badge v-else-if="props.row.status === 'SCHEDULED'" class="bg-green-10 status-badge">
+                        PROGRAMADO
+                      </q-badge>
+                      <q-badge v-else-if="props.row.status === 'PENDING'" class="bg-grey-5 status-badge">
+                        PENDIENTE
+                      </q-badge>
+                      <q-badge v-else class="bg-red status-badge">
+                        CANCELADO
+                      </q-badge>
+                    </div>
+                  </template>
+                  <template v-else-if="col.name === 'acciones'">
+                    <div class="row q-gutter-xs justify-end">
+                      <q-btn
+                        round
+                        size="xs"
+                        color="green-10"
+                        icon="visibility"
+                        class="action-btn btn-press"
+                        @click="verDatos(props.row)"
+                      >
+                        <q-tooltip>Ver datos del comité</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        v-if="props.row.status === 'PENDING'"
+                        round
+                        size="xs"
+                        color="red"
+                        icon="cancel"
+                        class="action-btn btn-press"
+                        @click="cancelarComite(props.row)"
+                      >
+                        <q-tooltip>Cancelar comité</q-tooltip>
+                      </q-btn>
+                    </div>
+                  </template>
+                  <template v-else>
+                    {{ col.value }}
+                  </template>
+                </q-td>
+              </q-tr>
+            </template>
+          </q-table>
+        </div>
       </div>
-    </div>
 
-    <!-- 5. Dialog: Wizard Crear Comité -->
-    <q-dialog v-model="prompt" persistent>
-      <q-card style="width: 1100px; max-width: 98vw; height: 90vh;">
-        <q-card-section class="bg-green-9 q-px-lg">
-          <div class="row items-center">
-            <div class="col-10">
-              <h5 class="q-mt-sm q-mb-sm text-white text-center text-weight-bold">
-                CREAR COMITÉ
-              </h5>
+      <!-- 5. Dialog: Wizard Crear Comité -->
+      <q-dialog v-model="prompt" persistent>
+        <q-card class="comite-dialog">
+          <q-card-section class="bg-green-9 q-px-lg dialog-header">
+            <div class="row items-center">
+              <div class="col-10">
+                <h5 class="q-mt-sm q-mb-sm text-white text-center text-weight-bold">
+                  CREAR COMITÉ
+                </h5>
+              </div>
+              <div class="col-2 text-right">
+                <q-btn flat round icon="close" color="white" class="btn-press" @click="cerrarDialog" />
+              </div>
             </div>
-            <div class="col-2 text-right">
-              <q-btn flat round icon="close" color="white" @click="cerrarDialog" />
-            </div>
-          </div>
-        </q-card-section>
+          </q-card-section>
 
-        <q-card-section class="q-pt-none" style="height: calc(90vh - 100px); overflow-y: auto;">
-          <q-stepper v-model="step" ref="stepper" color="green-9" animated flat>
-            <!-- PASO 1: Ficha e Instructores -->
-            <q-step
-              :name="1"
-              title="Ficha e Instructores"
-              icon="badge"
-              :done="step > 1"
-              class="q-py-md"
-            >
-              <!-- Sección Ficha -->
-              <div class="q-mb-xl">
-                <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
-                  <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">badge</span>
-                  Ficha del Programa
+          <q-card-section class="q-pt-none dialog-body">
+            <q-stepper v-model="step" ref="stepper" color="green-9" animated flat>
+              <!-- PASO 1: Ficha e Instructores -->
+              <q-step
+                :name="1"
+                title="Ficha e Instructores"
+                icon="badge"
+                :done="step > 1"
+                class="q-py-md"
+              >
+                <!-- Sección Ficha -->
+                <div class="q-mb-xl section-animate">
+                  <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
+                    <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">badge</span>
+                    Ficha del Programa
+                  </div>
+
+                  <!-- Ficha seleccionada -->
+                  <div v-if="wizardData.ficha" class="q-mb-md">
+                    <q-card flat bordered class="bg-green-1 selected-card">
+                      <q-item>
+                        <q-item-section avatar>
+                          <q-icon name="check_circle" color="green-9" size="32px" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label class="text-weight-bold text-green-9">{{ wizardData.ficha }}</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                          <q-btn flat round color="red" icon="delete" class="btn-press" @click="eliminarFicha" />
+                        </q-item-section>
+                      </q-item>
+                    </q-card>
+                  </div>
+
+                  <!-- Búsqueda de ficha -->
+                  <div v-else>
+                    <div class="row q-col-gutter-sm q-mb-sm">
+                      <div class="col-12 col-md-10">
+                        <q-input
+                          filled
+                          v-model="busquedaFicha"
+                          label="Número de ficha..."
+                          @keyup.enter="buscarFichaBtn"
+                          :loading="loadingFichas"
+                          clearable
+                        >
+                          <template v-slot:prepend>
+                            <span class="material-symbols-outlined">search</span>
+                          </template>
+                        </q-input>
+                      </div>
+                      <div class="col-12 col-md-2">
+                        <q-btn
+                          class="bg-green-9 text-white full-height btn-press"
+                          label="Buscar"
+                          @click="buscarFichaBtn"
+                          :loading="loadingFichas"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Resultados de fichas -->
+                  <div v-if="fichasResultados.length > 0" class="q-mt-sm">
+                    <q-card flat bordered class="results-card">
+                      <q-card-section class="bg-grey-3 q-pa-sm">
+                        <div class="text-caption text-grey-7">Selecciona una ficha:</div>
+                      </q-card-section>
+                      <q-list separator>
+                        <q-item
+                          v-for="(ficha, index) in fichasResultados"
+                          :key="ficha._id"
+                          clickable
+                          @click="seleccionarFicha(ficha)"
+                          class="q-pa-md result-item"
+                          :style="{ animationDelay: `${index * 30}ms` }"
+                        >
+                          <q-item-section avatar>
+                            <q-icon name="badge" color="green-9" />
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label class="text-weight-bold text-green-9">{{ ficha.number }}</q-item-label>
+                            <q-item-label caption>{{ ficha.program?.name || 'Sin nombre' }}</q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <q-icon name="add_circle" color="green-9" size="28px" />
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-card>
+                  </div>
+
+                  <!-- Sin resultados -->
+                  <q-banner v-else-if="busquedaFichaRealizada && !loadingFichas" class="bg-orange-1 text-orange-9 q-mt-sm">
+                    <template v-slot:avatar>
+                      <q-icon name="info" />
+                    </template>
+                    No se encontraron fichas con ese número
+                  </q-banner>
                 </div>
 
-                <!-- Ficha seleccionada -->
-                <div v-if="wizardData.ficha" class="q-mb-md">
-                  <q-card flat bordered class="bg-green-1">
-                    <q-item>
-                      <q-item-section avatar>
-                        <q-icon name="check_circle" color="green-9" size="32px" />
-                      </q-item-section>
-                      <q-item-section>
-                        <q-item-label class="text-weight-bold text-green-9">{{ wizardData.ficha }}</q-item-label>
-                      </q-item-section>
-                      <q-item-section side>
-                        <q-btn flat round color="red" icon="delete" @click="eliminarFicha" />
-                      </q-item-section>
-                    </q-item>
-                  </q-card>
-                </div>
+                <!-- Sección Instructores -->
+                <div class="section-animate">
+                  <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
+                    <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">groups</span>
+                    Instructores Involucrados
+                    <q-badge :label="wizardData.instructores.length" color="green-9" class="q-ml-md" />
+                  </div>
 
-                <!-- Búsqueda de ficha -->
-                <div v-else>
+                  <!-- Instructores agregados -->
+                  <div v-if="wizardData.instructores.length > 0" class="q-mb-md">
+                    <q-card flat bordered class="bg-green-1 selected-card">
+                      <q-card-section class="bg-green-2 q-pa-sm">
+                        <div class="text-caption text-green-9">Instructores agregados:</div>
+                      </q-card-section>
+                      <q-list separator>
+                        <q-item
+                          v-for="(instructor, index) in wizardData.instructores"
+                          :key="instructor._id"
+                          class="q-pa-sm"
+                          :style="{ animationDelay: `${index * 30}ms` }"
+                        >
+                          <q-item-section avatar>
+                            <q-icon name="person" color="green-9" />
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label class="text-weight-bold">{{ instructor.name }}</q-item-label>
+                            <q-item-label caption>{{ instructor.tpdocument || 'CC' }}: {{ instructor.numdocument }}</q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <q-btn flat round color="red" icon="close" class="btn-press" @click="eliminarInstructor(instructor._id)" />
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-card>
+                  </div>
+
+                  <!-- Búsqueda de instructores -->
                   <div class="row q-col-gutter-sm q-mb-sm">
                     <div class="col-12 col-md-10">
                       <q-input
                         filled
-                        v-model="busquedaFicha"
-                        label="Número de ficha..."
-                        @keyup.enter="buscarFichaBtn"
-                        :loading="loadingFichas"
+                        v-model="busquedaInstructor"
+                        label="Nombre o cédula del instructor..."
+                        @keyup.enter="buscarInstructorBtn"
+                        :loading="loadingInstructores"
                         clearable
                       >
                         <template v-slot:prepend>
-                          <span class="material-symbols-outlined">search</span>
+                          <span class="material-symbols-outlined">person_search</span>
                         </template>
                       </q-input>
                     </div>
                     <div class="col-12 col-md-2">
                       <q-btn
-                        class="bg-green-9 text-white full-height"
+                        class="bg-green-9 text-white full-height btn-press"
                         label="Buscar"
-                        @click="buscarFichaBtn"
-                        :loading="loadingFichas"
+                        @click="buscarInstructorBtn"
+                        :loading="loadingInstructores"
                       />
                     </div>
                   </div>
-                </div>
 
-                <!-- Resultados de fichas -->
-                <div v-if="fichasResultados.length > 0" class="q-mt-sm">
-                  <q-card flat bordered>
-                    <q-card-section class="bg-grey-3 q-pa-sm">
-                      <div class="text-caption text-grey-7">Selecciona una ficha:</div>
-                    </q-card-section>
-                    <q-list separator>
-                      <q-item
-                        v-for="ficha in fichasResultados"
-                        :key="ficha._id"
-                        clickable
-                        @click="seleccionarFicha(ficha)"
-                        class="q-pa-md"
-                      >
-                        <q-item-section avatar>
-                          <q-icon name="badge" color="green-9" />
-                        </q-item-section>
-                        <q-item-section>
-                          <q-item-label class="text-weight-bold text-green-9">{{ ficha.number }}</q-item-label>
-                          <q-item-label caption>{{ ficha.program?.name || 'Sin nombre' }}</q-item-label>
-                        </q-item-section>
-                        <q-item-section side>
-                          <q-icon name="add_circle" color="green-9" size="28px" />
-                        </q-item-section>
-                      </q-item>
-                    </q-list>
-                  </q-card>
-                </div>
-
-                <!-- Sin resultados -->
-                <q-banner v-else-if="busquedaFichaRealizada && !loadingFichas" class="bg-orange-1 text-orange-9 q-mt-sm">
-                  <template v-slot:avatar>
-                    <q-icon name="info" />
-                  </template>
-                  No se encontraron fichas con ese número
-                </q-banner>
-              </div>
-
-              <!-- Sección Instructores -->
-              <div>
-                <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
-                  <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">groups</span>
-                  Instructores Involucrados
-                  <q-badge :label="wizardData.instructores.length" color="green-9" class="q-ml-md" />
-                </div>
-
-                <!-- Instructores agregados -->
-                <div v-if="wizardData.instructores.length > 0" class="q-mb-md">
-                  <q-card flat bordered class="bg-green-1">
-                    <q-card-section class="bg-green-2 q-pa-sm">
-                      <div class="text-caption text-green-9">Instructores agregados:</div>
-                    </q-card-section>
-                    <q-list separator>
-                      <q-item
-                        v-for="instructor in wizardData.instructores"
-                        :key="instructor._id"
-                        class="q-pa-sm"
-                      >
-                        <q-item-section avatar>
-                          <q-icon name="person" color="green-9" />
-                        </q-item-section>
-                        <q-item-section>
-                          <q-item-label class="text-weight-bold">{{ instructor.name }}</q-item-label>
-                          <q-item-label caption>{{ instructor.tpdocument || 'CC' }}: {{ instructor.numdocument }}</q-item-label>
-                        </q-item-section>
-                        <q-item-section side>
-                          <q-btn flat round color="red" icon="close" @click="eliminarInstructor(instructor._id)" />
-                        </q-item-section>
-                      </q-item>
-                    </q-list>
-                  </q-card>
-                </div>
-
-                <!-- Búsqueda de instructores -->
-                <div class="row q-col-gutter-sm q-mb-sm">
-                  <div class="col-12 col-md-10">
-                    <q-input
-                      filled
-                      v-model="busquedaInstructor"
-                      label="Nombre o cédula del instructor..."
-                      @keyup.enter="buscarInstructorBtn"
-                      :loading="loadingInstructores"
-                      clearable
-                    >
-                      <template v-slot:prepend>
-                        <span class="material-symbols-outlined">person_search</span>
-                      </template>
-                    </q-input>
-                  </div>
-                  <div class="col-12 col-md-2">
-                    <q-btn
-                      class="bg-green-9 text-white full-height"
-                      label="Buscar"
-                      @click="buscarInstructorBtn"
-                      :loading="loadingInstructores"
-                    />
-                  </div>
-                </div>
-
-                <!-- Resultados de instructores -->
-                <div v-if="instructoresResultados.length > 0" class="q-mt-sm">
-                  <div class="row items-center q-mb-sm">
-                    <div class="col text-caption text-grey-7">
-                      Resultados encontrados (haz clic para agregar)
+                  <!-- Resultados de instructores -->
+                  <div v-if="instructoresResultados.length > 0" class="q-mt-sm">
+                    <div class="row items-center q-mb-sm">
+                      <div class="col text-caption text-grey-7">
+                        Resultados encontrados (haz clic para agregar)
+                      </div>
+                      <div class="col-auto">
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          icon="close"
+                          color="red"
+                          class="btn-press"
+                          @click="cerrarResultadosInstructores"
+                        >
+                          <q-tooltip>Cerrar resultados</q-tooltip>
+                        </q-btn>
+                      </div>
                     </div>
-                    <div class="col-auto">
+                    <q-card flat bordered class="results-card">
+                      <q-list separator>
+                        <q-item
+                          v-for="(instructor, index) in instructoresResultados"
+                          :key="instructor._id"
+                          clickable
+                          @click="agregarInstructor(instructor)"
+                          class="q-pa-md result-item"
+                          :style="{ animationDelay: `${index * 30}ms` }"
+                        >
+                          <q-item-section avatar>
+                            <q-icon name="person" color="green-9" />
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label class="text-weight-bold">{{ instructor.name }}</q-item-label>
+                            <q-item-label caption>{{ instructor.tpdocument || 'CC' }}: {{ instructor.numdocument }}</q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <q-icon name="add_circle" color="green-9" size="28px" />
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-card>
+                  </div>
+
+                  <!-- Sin resultados -->
+                  <q-banner v-else-if="busquedaInstructorRealizada && !loadingInstructores" class="bg-orange-1 text-orange-9 q-mt-sm">
+                    <template v-slot:avatar>
+                      <q-icon name="info" />
+                    </template>
+                    No se encontraron instructores con esa búsqueda
+                  </q-banner>
+                </div>
+
+                <!-- Botones de navegación Paso 1 -->
+                <div class="row q-mt-xl justify-end">
+                  <q-btn
+                    flat
+                    @click="validarPaso1"
+                    class="bg-green-9 text-white btn-press"
+                    label="Siguiente"
+                    size="md"
+                  />
+                </div>
+              </q-step>
+
+              <!-- PASO 2: Datos del Aprendiz -->
+              <q-step
+                :name="2"
+                title="Datos del Aprendiz"
+                icon="person_add"
+                :done="step > 2"
+                class="q-py-md"
+              >
+                <!-- Resumen de aprendices -->
+                <div class="q-mb-xl section-animate">
+                  <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
+                    <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">group</span>
+                    Aprendices del Comité
+                    <q-badge :label="wizardData.aprendices.length" color="green-9" class="q-ml-md" />
+                  </div>
+
+                  <!-- Aprendices agregados -->
+                  <div v-if="wizardData.aprendices.length > 0">
+                    <q-card flat bordered class="bg-green-1 selected-card">
+                      <q-card-section class="bg-green-2 q-pa-sm">
+                        <div class="text-caption text-green-9">Aprendices agregados al comité:</div>
+                      </q-card-section>
+                      <q-list separator>
+                        <q-item
+                          v-for="(aprendiz, index) in wizardData.aprendices"
+                          :key="aprendiz.id"
+                          class="q-pa-md"
+                          :style="{ animationDelay: `${index * 30}ms` }"
+                        >
+                          <q-item-section avatar>
+                            <q-icon name="person" color="green-9" />
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label class="text-weight-bold">{{ aprendiz.fullname }}</q-item-label>
+                            <q-item-label caption>{{ aprendiz.documentType }}: {{ aprendiz.documentNumber }}</q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <q-btn flat round color="red" icon="close" class="btn-press" @click="eliminarAprendiz(aprendiz.id)" />
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-card>
+                  </div>
+
+                  <!-- Banner cuando no hay aprendices -->
+                  <q-banner v-else class="bg-orange-1 text-orange-9">
+                    <template v-slot:avatar>
+                      <q-icon name="info" />
+                    </template>
+                    No has agregado aprendices aún. Debes agregar al menos uno para continuar.
+                  </q-banner>
+                </div>
+
+                <!-- Formulario de aprendiz -->
+                <div class="section-animate">
+                  <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
+                    <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">person_add</span>
+                    Agregar Nuevo Aprendiz
+                  </div>
+
+                  <q-card flat bordered class="q-mb-md form-card">
+                    <q-card-section>
+                      <div class="row q-col-gutter-md">
+                        <div class="col-12 col-md-4">
+                          <q-select
+                            ref="documentTypeRef"
+                            filled
+                            v-model="nuevoAprendiz.documentType"
+                            :options="documentTypeOptions"
+                            label="Tipo de Documento *"
+                            lazy-rules
+                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                          >
+                            <template v-slot:prepend>
+                              <span class="material-symbols-outlined">badge</span>
+                            </template>
+                          </q-select>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                          <q-input
+                            ref="documentNumberRef"
+                            filled
+                            v-model="nuevoAprendiz.documentNumber"
+                            label="Número de Documento *"
+                            lazy-rules
+                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                          >
+                            <template v-slot:prepend>
+                              <span class="material-symbols-outlined">pin</span>
+                            </template>
+                          </q-input>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                          <q-input
+                            ref="phoneRef"
+                            filled
+                            v-model="nuevoAprendiz.phone"
+                            label="Teléfono *"
+                            lazy-rules
+                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                          >
+                            <template v-slot:prepend>
+                              <span class="material-symbols-outlined">phone</span>
+                            </template>
+                          </q-input>
+                        </div>
+
+                        <div class="col-12">
+                          <q-input
+                            ref="fullnameRef"
+                            filled
+                            v-model="nuevoAprendiz.fullname"
+                            label="Nombre Completo *"
+                            placeholder="Nombres y Apellidos"
+                            lazy-rules
+                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                          >
+                            <template v-slot:prepend>
+                              <span class="material-symbols-outlined">person</span>
+                            </template>
+                          </q-input>
+                        </div>
+
+                        <div class="col-12">
+                          <q-input
+                            ref="emailRef"
+                            filled
+                            type="email"
+                            v-model="nuevoAprendiz.email"
+                            label="Correo Electrónico *"
+                            lazy-rules
+                            :rules="[
+                              (val) => (val && val.trim().length > 0) || 'El campo es requerido',
+                              (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || 'Formato de correo inválido'
+                            ]"
+                          >
+                            <template v-slot:prepend>
+                              <span class="material-symbols-outlined">email</span>
+                            </template>
+                          </q-input>
+                        </div>
+                      </div>
+                    </q-card-section>
+                    <q-card-actions align="right">
                       <q-btn
-                        flat
-                        dense
-                        round
-                        icon="close"
-                        color="red"
-                        @click="cerrarResultadosInstructores"
+                        color="green-9"
+                        label="Agregar Aprendiz"
+                        @click="agregarAprendiz"
+                        :loading="loadingAprendiz"
+                        class="btn-press"
                       >
-                        <q-tooltip>Cerrar resultados</q-tooltip>
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">add_circle</span>
+                        </template>
                       </q-btn>
-                    </div>
-                  </div>
-                  <q-card flat bordered>
-                    <q-list separator>
-                      <q-item
-                        v-for="instructor in instructoresResultados"
-                        :key="instructor._id"
-                        clickable
-                        @click="agregarInstructor(instructor)"
-                        class="q-pa-md"
-                      >
-                        <q-item-section avatar>
-                          <q-icon name="person" color="green-9" />
-                        </q-item-section>
-                        <q-item-section>
-                          <q-item-label class="text-weight-bold">{{ instructor.name }}</q-item-label>
-                          <q-item-label caption>{{ instructor.tpdocument || 'CC' }}: {{ instructor.numdocument }}</q-item-label>
-                        </q-item-section>
-                        <q-item-section side>
-                          <q-icon name="add_circle" color="green-9" size="28px" />
-                        </q-item-section>
-                      </q-item>
-                    </q-list>
+                    </q-card-actions>
                   </q-card>
                 </div>
 
-                <!-- Sin resultados -->
-                <q-banner v-else-if="busquedaInstructorRealizada && !loadingInstructores" class="bg-orange-1 text-orange-9 q-mt-sm">
-                  <template v-slot:avatar>
-                    <q-icon name="info" />
-                  </template>
-                  No se encontraron instructores con esa búsqueda
-                </q-banner>
-              </div>
+                <!-- Botones de navegación Paso 2 -->
+                <div class="row q-mt-xl justify-between">
+                  <q-btn flat label="Atrás" @click="step = 1" size="md" class="btn-press" />
+                  <q-btn
+                    flat
+                    @click="irPaso3"
+                    class="bg-green-9 text-white btn-press"
+                    label="Siguiente"
+                    size="md"
+                    :disable="wizardData.aprendices.length === 0"
+                  />
+                </div>
+              </q-step>
 
-              <!-- Botones de navegación Paso 1 -->
-              <div class="row q-mt-xl justify-end">
-                <q-btn
-                  flat
-                  @click="validarPaso1"
-                  class="bg-green-9 text-white"
-                  label="Siguiente"
-                  size="md"
-                />
-              </div>
-            </q-step>
-
-            <!-- PASO 2: Datos del Aprendiz -->
-            <q-step
-              :name="2"
-              title="Datos del Aprendiz"
-              icon="person_add"
-              :done="step > 2"
-              class="q-py-md"
-            >
-              <!-- Resumen de aprendices -->
-              <div class="q-mb-xl">
-                <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
-                  <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">group</span>
-                  Aprendices del Comité
-                  <q-badge :label="wizardData.aprendices.length" color="green-9" class="q-ml-md" />
+              <!-- PASO 3: Detalles por Aprendiz -->
+              <q-step
+                :name="3"
+                title="Detalles del Comité"
+                icon="description"
+                class="q-py-md"
+              >
+                <!-- Contador -->
+                <div class="q-mb-xl">
+                  <q-banner class="bg-blue-1 text-blue-9">
+                    <template v-slot:avatar>
+                      <q-icon name="fact_check" color="blue-9" size="24px" />
+                    </template>
+                    <div class="text-weight-bold">
+                      {{ aprendicesCompletados }} de {{ wizardData.aprendices.length }} aprendiz(es) completado(s)
+                    </div>
+                  </q-banner>
                 </div>
 
-                <!-- Aprendices agregados (estilo fichas) -->
-                <div v-if="wizardData.aprendices.length > 0">
-                  <q-card flat bordered class="bg-green-1">
-                    <q-card-section class="bg-green-2 q-pa-sm">
-                      <div class="text-caption text-green-9">Aprendices agregados al comité:</div>
-                    </q-card-section>
+                <!-- Selector de aprendiz -->
+                <div class="q-mb-xl">
+                  <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
+                    <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">list_alt</span>
+                    Selecciona un aprendiz para completar información
+                  </div>
+
+                  <q-card flat bordered class="learners-card">
                     <q-list separator>
                       <q-item
-                        v-for="aprendiz in wizardData.aprendices"
+                        v-for="(aprendiz, index) in wizardData.aprendices"
                         :key="aprendiz.id"
-                        class="q-pa-md"
+                        clickable
+                        @click="aprendizActual = aprendiz"
+                        :class="{ 'bg-blue-1': aprendizActual?.id === aprendiz.id }"
+                        class="q-pa-md learner-item"
+                        :style="{ animationDelay: `${index * 30}ms` }"
                       >
                         <q-item-section avatar>
-                          <q-icon name="person" color="green-9" />
+                          <q-icon
+                            :name="aprendizActual?.id === aprendiz.id ? 'check_circle' : 'radio_button_unchecked'"
+                            :color="aprendizActual?.id === aprendiz.id ? 'green-9' : 'grey-6'"
+                          />
                         </q-item-section>
                         <q-item-section>
                           <q-item-label class="text-weight-bold">{{ aprendiz.fullname }}</q-item-label>
                           <q-item-label caption>{{ aprendiz.documentType }}: {{ aprendiz.documentNumber }}</q-item-label>
                         </q-item-section>
                         <q-item-section side>
-                          <q-btn flat round color="red" icon="close" @click="eliminarAprendiz(aprendiz.id)" />
+                          <q-badge
+                            v-if="aprendiz.noveltyType && aprendiz.description && aprendiz.manual && aprendiz.competencesText && aprendiz.outcomesText"
+                            label="Completado"
+                            color="green-9"
+                          />
                         </q-item-section>
                       </q-item>
                     </q-list>
                   </q-card>
                 </div>
 
-                <!-- Banner cuando no hay aprendices -->
-                <q-banner v-else class="bg-orange-1 text-orange-9">
-                  <template v-slot:avatar>
-                    <q-icon name="info" />
-                  </template>
-                  No has agregado aprendices aún. Debes agregar al menos uno para continuar.
-                </q-banner>
-              </div>
-
-              <!-- Formulario de aprendiz -->
-              <div>
-                <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
-                  <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">person_add</span>
-                  Agregar Nuevo Aprendiz
-                </div>
-
-                <q-card flat bordered class="q-mb-md">
-                  <q-card-section>
-                    <div class="row q-col-gutter-md">
-                      <div class="col-12 col-md-4">
-                        <q-select
-                          ref="documentTypeRef"
-                          filled
-                          v-model="nuevoAprendiz.documentType"
-                          :options="documentTypeOptions"
-                          label="Tipo de Documento *"
-                          lazy-rules
-                          :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                        >
-                          <template v-slot:prepend>
-                            <span class="material-symbols-outlined">badge</span>
-                          </template>
-                        </q-select>
-                      </div>
-
-                      <div class="col-12 col-md-4">
-                        <q-input
-                          ref="documentNumberRef"
-                          filled
-                          v-model="nuevoAprendiz.documentNumber"
-                          label="Número de Documento *"
-                          lazy-rules
-                          :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                        >
-                          <template v-slot:prepend>
-                            <span class="material-symbols-outlined">pin</span>
-                          </template>
-                        </q-input>
-                      </div>
-
-                      <div class="col-12 col-md-4">
-                        <q-input
-                          ref="phoneRef"
-                          filled
-                          v-model="nuevoAprendiz.phone"
-                          label="Teléfono *"
-                          lazy-rules
-                          :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                        >
-                          <template v-slot:prepend>
-                            <span class="material-symbols-outlined">phone</span>
-                          </template>
-                        </q-input>
-                      </div>
-
-                      <div class="col-12">
-                        <q-input
-                          ref="fullnameRef"
-                          filled
-                          v-model="nuevoAprendiz.fullname"
-                          label="Nombre Completo *"
-                          placeholder="Nombres y Apellidos"
-                          lazy-rules
-                          :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                        >
-                          <template v-slot:prepend>
-                            <span class="material-symbols-outlined">person</span>
-                          </template>
-                        </q-input>
-                      </div>
-
-                      <div class="col-12">
-                        <q-input
-                          ref="emailRef"
-                          filled
-                          type="email"
-                          v-model="nuevoAprendiz.email"
-                          label="Correo Electrónico *"
-                          lazy-rules
-                          :rules="[
-                            (val) => (val && val.trim().length > 0) || 'El campo es requerido',
-                            (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || 'Formato de correo inválido'
-                          ]"
-                        >
-                          <template v-slot:prepend>
-                            <span class="material-symbols-outlined">email</span>
-                          </template>
-                        </q-input>
-                      </div>
-                    </div>
-                  </q-card-section>
-                  <q-card-actions align="right">
-                    <q-btn
+                <!-- Detalles del aprendiz actual -->
+                <div v-if="aprendizActual" class="section-animate">
+                  <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
+                    <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">edit_note</span>
+                    Detalles de {{ aprendizActual.fullname }}
+                    <q-chip
+                      :label="`Aprendiz ${indexOfAprendizActual + 1} de ${wizardData.aprendices.length}`"
                       color="green-9"
-                      label="Agregar Aprendiz"
-                      @click="agregarAprendiz"
-                      :loading="loadingAprendiz"
-                    >
-                      <template v-slot:prepend>
-                        <span class="material-symbols-outlined">add_circle</span>
-                      </template>
-                    </q-btn>
-                  </q-card-actions>
-                </q-card>
-              </div>
-
-              <!-- Botones de navegación Paso 2 -->
-              <div class="row q-mt-xl justify-between">
-                <q-btn flat label="Atrás" @click="step = 1" size="md" />
-                <q-btn
-                  flat
-                  @click="irPaso3"
-                  class="bg-green-9 text-white"
-                  label="Siguiente"
-                  size="md"
-                  :disable="wizardData.aprendices.length === 0"
-                />
-              </div>
-            </q-step>
-
-            <!-- PASO 3: Detalles por Aprendiz -->
-            <q-step
-              :name="3"
-              title="Detalles del Comité"
-              icon="description"
-              class="q-py-md"
-            >
-              <!-- Contador -->
-              <div class="q-mb-xl">
-                <q-banner class="bg-blue-1 text-blue-9">
-                  <template v-slot:avatar>
-                    <q-icon name="fact_check" color="blue-9" size="24px" />
-                  </template>
-                  <div class="text-weight-bold">
-                    {{ aprendicesCompletados }} de {{ wizardData.aprendices.length }} aprendiz(es) completado(s)
+                      text-color="white"
+                      class="q-ml-md"
+                    />
                   </div>
-                </q-banner>
-              </div>
 
-              <!-- Selector de aprendiz -->
-              <div class="q-mb-xl">
-                <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
-                  <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">list_alt</span>
-                  Selecciona un aprendiz para completar información
+                  <q-card flat bordered class="form-card">
+                    <q-card-section class="bg-green-1">
+                      <div class="row items-center">
+                        <div class="col-10">
+                          <div class="text-subtitle2 text-weight-bold text-green-9">
+                            {{ aprendizActual.fullname }}
+                          </div>
+                          <div class="text-caption text-grey-7">
+                            {{ aprendizActual.documentType }}: {{ aprendizActual.documentNumber }}
+                          </div>
+                        </div>
+                      </div>
+                    </q-card-section>
+
+                    <q-card-section>
+                      <div class="row q-col-gutter-md">
+                        <div class="col-12">
+                          <q-select
+                            filled
+                            v-model="aprendizActual.noveltyType"
+                            :options="noveltyTypeOptions"
+                            option-label="label"
+                            option-value="value"
+                            emit-value
+                            map-options
+                            label="Tipo de Novedad *"
+                            lazy-rules
+                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                          >
+                            <template v-slot:prepend>
+                              <span class="material-symbols-outlined">warning</span>
+                            </template>
+                          </q-select>
+                        </div>
+
+                        <div class="col-12">
+                          <q-input
+                            filled
+                            type="textarea"
+                            v-model="aprendizActual.description"
+                            label="Descripción de los Hechos *"
+                            rows="4"
+                            lazy-rules
+                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                          >
+                            <template v-slot:prepend>
+                              <span class="material-symbols-outlined">edit_note</span>
+                            </template>
+                          </q-input>
+                        </div>
+
+                        <div class="col-12">
+                          <q-input
+                            filled
+                            type="textarea"
+                            v-model="aprendizActual.manual"
+                            label="Reglamento Vulnerado *"
+                            rows="3"
+                            lazy-rules
+                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                          >
+                            <template v-slot:prepend>
+                              <span class="material-symbols-outlined">gavel</span>
+                            </template>
+                          </q-input>
+                        </div>
+
+                        <div class="col-12">
+                          <q-input
+                            filled
+                            type="textarea"
+                            v-model="aprendizActual.competencesText"
+                            label="Competencias Afectadas *"
+                            rows="2"
+                            lazy-rules
+                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                          >
+                            <template v-slot:prepend>
+                              <span class="material-symbols-outlined">school</span>
+                            </template>
+                          </q-input>
+                        </div>
+
+                        <div class="col-12">
+                          <q-input
+                            filled
+                            type="textarea"
+                            v-model="aprendizActual.outcomesText"
+                            label="Resultados de Aprendizaje Afectados *"
+                            rows="2"
+                            lazy-rules
+                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                          >
+                            <template v-slot:prepend>
+                              <span class="material-symbols-outlined">emoji_objects</span>
+                            </template>
+                          </q-input>
+                        </div>
+
+                        <div class="col-12">
+                          <div class="text-subtitle2 text-weight-bold text-green-9 q-mb-sm">
+                            Evidencias (Opcional)
+                          </div>
+                          <q-card
+                            flat
+                            bordered
+                            class="cursor-pointer upload-card"
+                            @click="!aprendizActual.evidenceFile && triggerFileInput(aprendizActual.id)"
+                            :class="{ 'bg-green-1': aprendizActual.evidenceFile }"
+                          >
+                            <q-card-section class="text-center q-py-lg">
+                              <div v-if="!aprendizActual.evidenceFile">
+                                <q-icon
+                                  name="cloud_upload"
+                                  size="64px"
+                                  color="green-9"
+                                  class="q-mb-md"
+                                />
+                                <div class="text-subtitle2 text-grey-7">
+                                  Haz clic para seleccionar archivo
+                                </div>
+                                <div class="text-caption text-grey-5 q-mt-sm">
+                                  PDF o Imagen (máximo 1 archivo)
+                                </div>
+                              </div>
+                              <div v-else>
+                                <q-icon
+                                  name="check_circle"
+                                  size="48px"
+                                  color="green-9"
+                                  class="q-mb-md"
+                                />
+                                <div class="text-subtitle2 text-green-9">
+                                  Archivo cargado
+                                </div>
+                                <div class="text-caption text-grey-7 q-mt-sm">
+                                  {{ aprendizActual.evidenceFile.name }}
+                                </div>
+                                <q-btn
+                                  flat
+                                  color="red"
+                                  label="Eliminar archivo"
+                                  class="q-mt-md btn-press"
+                                  @click.stop="aprendizActual.evidenceFile = null"
+                                >
+                                  <template v-slot:prepend>
+                                    <span class="material-symbols-outlined">delete</span>
+                                  </template>
+                                </q-btn>
+                              </div>
+                            </q-card-section>
+                          </q-card>
+                          <input
+                            type="file"
+                            :id="'fileInput-' + aprendizActual.id"
+                            class="hidden"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            @change="onFileSelected($event, aprendizActual)"
+                          />
+                        </div>
+                      </div>
+                    </q-card-section>
+                  </q-card>
                 </div>
 
-                <q-card flat bordered>
+                <!-- Botones de navegación Paso 3 -->
+                <div class="row q-mt-xl justify-between">
+                  <q-btn flat label="Atrás" @click="step = 2" size="md" class="btn-press" />
+                  <div>
+                    <q-btn
+                      v-if="indexOfAprendizActual < wizardData.aprendices.length - 1"
+                      flat
+                      @click="siguienteAprendiz"
+                      class="bg-green-9 text-white btn-press"
+                      label="Siguiente Aprendiz"
+                      size="md"
+                    />
+                    <q-btn
+                      v-else
+                      flat
+                      @click="guardarComite"
+                      class="bg-green-9 text-white btn-press"
+                      label="Finalizar y Crear Comité"
+                      size="md"
+                      :disable="aprendicesCompletados < wizardData.aprendices.length"
+                      :loading="guardandoComite"
+                    />
+                  </div>
+                </div>
+              </q-step>
+            </q-stepper>
+          </q-card-section>
+
+          <!-- Footer -->
+          <q-card-section class="bg-grey-2 q-py-sm dialog-footer">
+            <div class="text-center text-caption text-grey-7">
+              REPFORA - SENA © 2024 Todos los derechos reservados
+            </div>
+          </q-card-section>
+        </q-card>
+      </q-dialog>
+
+      <!-- Dialog: Ver Datos -->
+      <q-dialog v-model="dialogVerDatos">
+        <q-card class="ver-datos-dialog">
+          <q-card-section class="bg-green-9 q-px-lg dialog-header">
+            <div class="row items-center">
+              <div class="col-10">
+                <h5 class="q-mt-sm q-mb-sm text-white text-weight-bold">
+                  DATOS DEL COMITÉ
+                </h5>
+              </div>
+              <div class="col-2 text-right">
+                <q-btn flat round icon="close" color="white" class="btn-press" v-close-popup />
+              </div>
+            </div>
+          </q-card-section>
+          <q-card-section class="q-pa-md">
+            <div v-if="comiteSeleccionado">
+              <div class="row q-col-gutter-md">
+                <div class="col-12 col-md-6">
+                  <div class="text-weight-bold text-green-9">Ficha:</div>
+                  <div>{{ comiteSeleccionado.ficha || 'N/A' }}</div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="text-weight-bold text-green-9">ID Comité:</div>
+                  <div>COM-{{ String(comiteSeleccionado._id).slice(-6).toUpperCase() }}</div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="text-weight-bold text-green-9">Fecha de Reunión:</div>
+                  <div v-if="comiteSeleccionado.meetingDate">{{ formatDate(comiteSeleccionado.meetingDate) }}</div>
+                  <div v-else class="text-grey-5">Pendiente</div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="text-weight-bold text-green-9">Estado:</div>
+                  <div>{{ getStatusLabel(comiteSeleccionado.status) }}</div>
+                </div>
+                <div class="col-12">
+                  <div class="text-weight-bold text-green-9 q-mb-sm">Aprendices:</div>
                   <q-list separator>
-                    <q-item
-                      v-for="aprendiz in wizardData.aprendices"
-                      :key="aprendiz.id"
-                      clickable
-                      @click="aprendizActual = aprendiz"
-                      :class="{ 'bg-blue-1': aprendizActual?.id === aprendiz.id }"
-                      class="q-pa-md"
-                    >
+                    <q-item v-for="(learner, index) in comiteSeleccionado.learners" :key="index">
                       <q-item-section avatar>
-                        <q-icon :name="aprendizActual?.id === aprendiz.id ? 'check_circle' : 'radio_button_unchecked'"
-                               :color="aprendizActual?.id === aprendiz.id ? 'green-9' : 'grey-6'" />
+                        <q-icon name="person" color="green-9" />
                       </q-item-section>
                       <q-item-section>
-                        <q-item-label class="text-weight-bold">{{ aprendiz.fullname }}</q-item-label>
-                        <q-item-label caption>{{ aprendiz.documentType }}: {{ aprendiz.documentNumber }}</q-item-label>
+                        <q-item-label>{{ learner.name }}</q-item-label>
+                        <q-item-label caption>{{ learner.documentType }}: {{ learner.documentNumber }}</q-item-label>
                       </q-item-section>
                       <q-item-section side>
-                        <q-badge v-if="aprendiz.noveltyType && aprendiz.description && aprendiz.manual && aprendiz.competencesText && aprendiz.outcomesText"
-                                label="Completado" color="green-9" />
+                        <q-chip
+                          :label="getNoveltyTypeLabel(learner.noveltyType)"
+                          size="sm"
+                          :color="learner.noveltyType === 'ACADEMIC' ? 'orange' : learner.noveltyType === 'DISCIPLINARY' ? 'red' : 'purple'"
+                        />
                       </q-item-section>
                     </q-item>
                   </q-list>
-                </q-card>
-              </div>
-
-              <!-- Detalles del aprendiz actual -->
-              <div v-if="aprendizActual">
-                <div class="text-h6 text-weight-bold text-green-9 q-mb-md flex items-center">
-                  <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">edit_note</span>
-                  Detalles de {{ aprendizActual.fullname }}
-                  <q-chip :label="`Aprendiz ${indexOfAprendizActual + 1} de ${wizardData.aprendices.length}`"
-                         color="green-9" text-color="white" class="q-ml-md" />
-                </div>
-
-                <q-card flat bordered>
-                  <q-card-section class="bg-green-1">
-                    <div class="row items-center">
-                      <div class="col-10">
-                        <div class="text-subtitle2 text-weight-bold text-green-9">
-                          {{ aprendizActual.fullname }}
-                        </div>
-                        <div class="text-caption text-grey-7">
-                          {{ aprendizActual.documentType }}: {{ aprendizActual.documentNumber }}
-                        </div>
-                      </div>
-                    </div>
-                  </q-card-section>
-
-                  <q-card-section>
-                    <div class="row q-col-gutter-md">
-                      <div class="col-12">
-                        <q-select
-                          filled
-                          v-model="aprendizActual.noveltyType"
-                          :options="noveltyTypeOptions"
-                          option-label="label"
-                          option-value="value"
-                          emit-value
-                          map-options
-                          label="Tipo de Novedad *"
-                          lazy-rules
-                          :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                        >
-                          <template v-slot:prepend>
-                            <span class="material-symbols-outlined">warning</span>
-                          </template>
-                        </q-select>
-                      </div>
-
-                      <div class="col-12">
-                        <q-input
-                          filled
-                          type="textarea"
-                          v-model="aprendizActual.description"
-                          label="Descripción de los Hechos *"
-                          rows="4"
-                          lazy-rules
-                          :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                        >
-                          <template v-slot:prepend>
-                            <span class="material-symbols-outlined">edit_note</span>
-                          </template>
-                        </q-input>
-                      </div>
-
-                      <div class="col-12">
-                        <q-input
-                          filled
-                          type="textarea"
-                          v-model="aprendizActual.manual"
-                          label="Reglamento Vulnerado *"
-                          rows="3"
-                          lazy-rules
-                          :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                        >
-                          <template v-slot:prepend>
-                            <span class="material-symbols-outlined">gavel</span>
-                          </template>
-                        </q-input>
-                      </div>
-
-                      <div class="col-12">
-                        <q-input
-                          filled
-                          type="textarea"
-                          v-model="aprendizActual.competencesText"
-                          label="Competencias Afectadas *"
-                          rows="2"
-                          lazy-rules
-                          :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                        >
-                          <template v-slot:prepend>
-                            <span class="material-symbols-outlined">school</span>
-                          </template>
-                        </q-input>
-                      </div>
-
-                      <div class="col-12">
-                        <q-input
-                          filled
-                          type="textarea"
-                          v-model="aprendizActual.outcomesText"
-                          label="Resultados de Aprendizaje Afectados *"
-                          rows="2"
-                          lazy-rules
-                          :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                        >
-                          <template v-slot:prepend>
-                            <span class="material-symbols-outlined">emoji_objects</span>
-                          </template>
-                        </q-input>
-                      </div>
-
-                      <div class="col-12">
-                        <div class="text-subtitle2 text-weight-bold text-green-9 q-mb-sm">
-                          Evidencias (Opcional)
-                        </div>
-                        <q-card
-                          flat
-                          bordered
-                          class="cursor-pointer"
-                          @click="!aprendizActual.evidenceFile && triggerFileInput(aprendizActual.id)"
-                          :class="{ 'bg-green-1': aprendizActual.evidenceFile }"
-                        >
-                          <q-card-section class="text-center q-py-lg">
-                            <div v-if="!aprendizActual.evidenceFile">
-                              <q-icon
-                                name="cloud_upload"
-                                size="64px"
-                                color="green-9"
-                                class="q-mb-md"
-                              />
-                              <div class="text-subtitle2 text-grey-7">
-                                Haz clic para seleccionar archivo
-                              </div>
-                              <div class="text-caption text-grey-5 q-mt-sm">
-                                PDF o Imagen (máximo 1 archivo)
-                              </div>
-                            </div>
-                            <div v-else>
-                              <q-icon
-                                name="check_circle"
-                                size="48px"
-                                color="green-9"
-                                class="q-mb-md"
-                              />
-                              <div class="text-subtitle2 text-green-9">
-                                Archivo cargado
-                              </div>
-                              <div class="text-caption text-grey-7 q-mt-sm">
-                                {{ aprendizActual.evidenceFile.name }}
-                              </div>
-                              <q-btn
-                                flat
-                                color="red"
-                                label="Eliminar archivo"
-                                class="q-mt-md"
-                                @click.stop="aprendizActual.evidenceFile = null"
-                              >
-                                <template v-slot:prepend>
-                                  <span class="material-symbols-outlined">delete</span>
-                                </template>
-                              </q-btn>
-                            </div>
-                          </q-card-section>
-                        </q-card>
-                        <input
-                          type="file"
-                          :id="'fileInput-' + aprendizActual.id"
-                          class="hidden"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          @change="onFileSelected($event, aprendizActual)"
-                        />
-                      </div>
-                    </div>
-                  </q-card-section>
-                </q-card>
-              </div>
-
-              <!-- Botones de navegación Paso 3 -->
-              <div class="row q-mt-xl justify-between">
-                <q-btn flat label="Atrás" @click="step = 2" size="md" />
-                <div>
-                  <q-btn
-                    v-if="indexOfAprendizActual < wizardData.aprendices.length - 1"
-                    flat
-                    @click="siguienteAprendiz"
-                    class="bg-green-9 text-white"
-                    label="Siguiente Aprendiz"
-                    size="md"
-                  />
-                  <q-btn
-                    v-else
-                    flat
-                    @click="guardarComite"
-                    class="bg-green-9 text-white"
-                    label="Finalizar y Crear Comité"
-                    size="md"
-                    :disable="aprendicesCompletados < wizardData.aprendices.length"
-                    :loading="guardandoComite"
-                  />
                 </div>
               </div>
-            </q-step>
-          </q-stepper>
-        </q-card-section>
-
-        <!-- Footer -->
-        <q-card-section class="bg-grey-2 q-py-sm">
-          <div class="text-center text-caption text-grey-7">
-            REPFORA - SENA © 2024 Todos los derechos reservados
-          </div>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
-    <!-- Dialog: Ver Datos -->
-    <q-dialog v-model="dialogVerDatos">
-      <q-card style="min-width: 600px; max-width: 90vw;">
-        <q-card-section class="bg-green-9 q-px-lg">
-          <div class="row items-center">
-            <div class="col-10">
-              <h5 class="q-mt-sm q-mb-sm text-white text-weight-bold">
-                DATOS DEL COMITÉ
-              </h5>
             </div>
-            <div class="col-2 text-right">
-              <q-btn flat round icon="close" color="white" v-close-popup />
-            </div>
-          </div>
-        </q-card-section>
-        <q-card-section class="q-pa-md">
-          <div v-if="comiteSeleccionado">
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-md-6">
-                <div class="text-weight-bold text-green-9">Ficha:</div>
-                <div>{{ comiteSeleccionado.ficha || 'N/A' }}</div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="text-weight-bold text-green-9">ID Comité:</div>
-                <div>COM-{{ String(comiteSeleccionado._id).slice(-6).toUpperCase() }}</div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="text-weight-bold text-green-9">Fecha de Reunión:</div>
-                <div v-if="comiteSeleccionado.meetingDate">{{ formatDate(comiteSeleccionado.meetingDate) }}</div>
-                <div v-else class="text-grey-5">Pendiente</div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="text-weight-bold text-green-9">Estado:</div>
-                <div>{{ getStatusLabel(comiteSeleccionado.status) }}</div>
-              </div>
-              <div class="col-12">
-                <div class="text-weight-bold text-green-9 q-mb-sm">Aprendices:</div>
-                <q-list separator>
-                  <q-item v-for="(learner, index) in comiteSeleccionado.learners" :key="index">
-                    <q-item-section avatar>
-                      <q-icon name="person" color="green-9" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>{{ learner.name }}</q-item-label>
-                      <q-item-label caption>{{ learner.documentType }}: {{ learner.documentNumber }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <q-chip :label="getNoveltyTypeLabel(learner.noveltyType)" size="sm" :color="learner.noveltyType === 'ACADEMIC' ? 'orange' : learner.noveltyType === 'DISCIPLINARY' ? 'red' : 'purple'" />
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </div>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
+          </q-card-section>
+        </q-card>
+      </q-dialog>
     </div>
     <!-- Fin de la vista instructor -->
   </div>
@@ -917,6 +1021,22 @@ const userStore = storeUser();
 // Determinar si el usuario es NOVEDADES
 const isNovedades = computed(() => userStore.getRole() === 'NOVEDADES');
 
+// Tarjetas del dashboard NOVEDADES
+const dashboardCards = ref([
+  {
+    title: "Gestión de Comités",
+    description: "Administra y gestiona los comités evaluadores",
+    icon: "groups",
+    route: "/home/comites/gestion"
+  },
+  {
+    title: "Gestión de Aprendices",
+    description: "Consulta y administra la información de aprendices",
+    icon: "school",
+    route: "/home/comites/aprendices"
+  }
+]);
+
 // Estados
 const prompt = ref(false);
 const dialogVerDatos = ref(false);
@@ -927,6 +1047,7 @@ const loadingFichas = ref(false);
 const loadingInstructores = ref(false);
 const guardandoComite = ref(false);
 const loadingAprendiz = ref(false);
+const loadingTable = ref(true);
 const busquedaFichaRealizada = ref(false);
 const busquedaInstructorRealizada = ref(false);
 
@@ -1075,7 +1196,6 @@ async function buscarInstructorBtn() {
 
     const res = await get("/comites/search/instructors", { search: busquedaInstructor.value.trim() });
     const resultados = Array.isArray(res) ? res : (res?.data || []);
-    // Filtrar solo instructores activos (status: 0)
     instructoresResultados.value = resultados.filter(i => i.status === 0);
   } catch (error) {
     console.log("Error buscando instructores:", error);
@@ -1139,7 +1259,6 @@ function agregarAprendiz() {
     }
   }
 
-  // Validar formato de email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(nuevoAprendiz.value.email)) {
     $q.notify({ message: "Formato de correo electrónico inválido", color: "red", position: "top" });
@@ -1167,7 +1286,6 @@ function agregarAprendiz() {
     email: "",
   };
 
-  // Limpiar validaciones de los inputs
   documentTypeRef.value?.resetValidation();
   documentNumberRef.value?.resetValidation();
   phoneRef.value?.resetValidation();
@@ -1307,15 +1425,21 @@ function getStatusLabel(status) {
 
 async function cargarComites() {
   try {
+    loadingTable.value = true;
     const res = await get("/comites");
+    console.log("RESPUESTA COMITES:", res);
     const data = Array.isArray(res) ? res : (res?.data || []);
+    console.log("DATA PROCESADA:", data);
     comitesRows.value = data.map(c => ({
       ...c,
       ficha: c.fiche?.number || 'N/A',
       nombrePrograma: c.fiche?.program?.name || 'Sin nombre',
     }));
+    console.log("COMITES ROWS:", comitesRows.value);
   } catch (error) {
     console.log("Error cargando comités:", error);
+  } finally {
+    loadingTable.value = false;
   }
 }
 
@@ -1347,12 +1471,23 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-.hidden {
-  display: none;
+<style>
+/* ========================================
+   Easing Curves (Emil Kowalski principles)
+   NOTA: Sin scope para que :root funcione correctamente
+   ======================================== */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
+</style>
 
-/* ========== Dashboard NOVEDADES ========== */
+<style scoped>
+
+/* ========================================
+   Dashboard NOVEDADES
+   ======================================== */
 .comites-dashboard {
   padding: 16px;
 }
@@ -1377,10 +1512,24 @@ onMounted(() => {
   background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 200ms var(--ease-out),
+              box-shadow 200ms var(--ease-out);
   border: 1px solid rgba(34, 139, 34, 0.08);
   position: relative;
   overflow: hidden;
+  opacity: 0;
+  animation: fadeSlideUp 400ms var(--ease-out) forwards;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dashboard-card::before {
@@ -1393,22 +1542,33 @@ onMounted(() => {
   background: linear-gradient(180deg, #2e7d32, #66bb6a);
   border-radius: 20px 0 0 20px;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 200ms var(--ease-out);
 }
 
-.dashboard-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(46, 125, 50, 0.15), 0 4px 12px rgba(0, 0, 0, 0.06);
-  border-color: rgba(46, 125, 50, 0.2);
-}
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(46, 125, 50, 0.15), 0 4px 12px rgba(0, 0, 0, 0.06);
+    border-color: rgba(46, 125, 50, 0.2);
+  }
 
-.dashboard-card:hover::before {
-  opacity: 1;
+  .dashboard-card:hover::before {
+    opacity: 1;
+  }
+
+  .dashboard-card:hover .dashboard-card-icon {
+    transform: scale(1.08);
+  }
+
+  .dashboard-card:hover .dashboard-card-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .dashboard-card:active {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.12);
+  transition: transform 100ms var(--ease-out);
 }
 
 .dashboard-card-icon {
@@ -1420,11 +1580,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s ease;
-}
-
-.dashboard-card:hover .dashboard-card-icon {
-  transform: scale(1.08);
+  transition: transform 200ms var(--ease-out);
 }
 
 .dashboard-card-icon .material-symbols-outlined {
@@ -1456,12 +1612,8 @@ onMounted(() => {
   flex-shrink: 0;
   opacity: 0;
   transform: translateX(-8px);
-  transition: all 0.3s ease;
-}
-
-.dashboard-card:hover .dashboard-card-arrow {
-  opacity: 1;
-  transform: translateX(0);
+  transition: opacity 200ms var(--ease-out),
+              transform 200ms var(--ease-out);
 }
 
 .dashboard-card-arrow .material-symbols-outlined {
@@ -1489,6 +1641,250 @@ onMounted(() => {
 
   .dashboard-card-icon .material-symbols-outlined {
     font-size: 24px;
+  }
+}
+
+/* ========================================
+   Vista Instructor
+   ======================================== */
+.instructor-view {
+  opacity: 0;
+  animation: fadeIn 300ms var(--ease-out) forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========================================
+   Botones con feedback táctil (Emil principle)
+   ======================================== */
+.btn-press {
+  position: relative;
+  transition: transform 160ms var(--ease-out);
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Desactivar animación en touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .btn-press:active {
+    transform: none;
+  }
+}
+
+/* ========================================
+   Tabla con animaciones stagger
+   ======================================== */
+.comites-table {
+  opacity: 0;
+  animation: fadeIn 300ms var(--ease-out) 200ms forwards;
+}
+
+.table-row-animate {
+  opacity: 0;
+  animation: fadeSlideInLeft 300ms var(--ease-out) forwards;
+}
+
+@keyframes fadeSlideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Hover en filas de tabla */
+@media (hover: hover) and (pointer: fine) {
+  .table-row-animate:hover {
+    background-color: rgba(46, 125, 50, 0.03);
+  }
+}
+
+.ficha-cell,
+.date-cell,
+.id-cell {
+  transition: color 150ms var(--ease-out);
+}
+
+/* ========================================
+   Status badges
+   ======================================== */
+.status-badge {
+  transition: transform 150ms var(--ease-out),
+              filter 150ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .status-badge:hover {
+    transform: scale(1.05);
+  }
+}
+
+/* ========================================
+   Action buttons
+   ======================================== */
+.action-btn {
+  transition: transform 160ms var(--ease-out),
+              background-color 200ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .action-btn:hover {
+    transform: scale(1.1);
+  }
+}
+
+/* ========================================
+   Dialog
+   ======================================== */
+.comite-dialog,
+.ver-datos-dialog {
+  width: 900px !important;
+  max-width: 90vw !important;
+  opacity: 0;
+  animation: scaleIn 300ms var(--ease-out) forwards;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.dialog-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.dialog-body {
+  max-height: calc(90vh - 180px);
+  overflow-y: auto;
+}
+
+.dialog-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+/* ========================================
+   Cards y elementos del wizard
+   ======================================== */
+.selected-card,
+.results-card,
+.form-card,
+.learners-card {
+  transition: box-shadow 200ms var(--ease-out),
+              border-color 200ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .selected-card:hover,
+  .results-card:hover,
+  .form-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.result-item,
+.learner-item {
+  opacity: 0;
+  animation: fadeSlideInLeft 300ms var(--ease-out) forwards;
+  transition: background-color 150ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .result-item:hover,
+  .learner-item:hover {
+    background-color: rgba(46, 125, 50, 0.04);
+  }
+}
+
+.section-animate {
+  opacity: 0;
+  animation: fadeSlideUp 350ms var(--ease-out) forwards;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================
+   Upload card
+   ======================================== */
+.upload-card {
+  transition: background-color 200ms var(--ease-out),
+              box-shadow 200ms var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .upload-card:hover {
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.1);
+  }
+}
+
+/* ========================================
+   Stepper improvements
+   ======================================== */
+:deep(.q-stepper) {
+  opacity: 0;
+  animation: fadeIn 300ms var(--ease-out) forwards;
+}
+
+:deep(.q-step) {
+  transition: background-color 200ms var(--ease-out);
+}
+
+/* ========================================
+   Loading state
+   ======================================== */
+:deep(.q-table__loading) {
+  opacity: 0.7;
+}
+
+/* ========================================
+   Prefers reduced motion (Accessibility)
+   ======================================== */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-card,
+  .table-row-animate,
+  .result-item,
+  .learner-item,
+  .section-animate,
+  .comite-dialog,
+  .ver-datos-dialog {
+    animation: fadeIn 200ms ease;
+  }
+
+  @keyframes fadeIn {
+    to {
+      opacity: 1;
+    }
+  }
+
+  .btn-press:active {
+    transform: none;
   }
 }
 </style>

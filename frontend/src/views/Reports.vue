@@ -35,11 +35,13 @@
             />
             <div v-if="consult.value == 'instructor'">
               <q-input
+                ref="inputNumDocument"
                 filled
                 type="number"
                 v-model="numdocument"
                 label="Documento"
                 class="q-mb-md"
+                @keyup.enter="focusNextInput('email')"
               >
                 <template v-slot:prepend>
                   <span class="material-symbols-outlined"> badge </span>
@@ -47,10 +49,12 @@
               </q-input>
 
               <q-input
+                ref="inputEmail"
                 filled
                 type="email"
                 v-model="email"
                 label="Correo electrónico institucional"
+                @keyup.enter="goConsult()"
               >
                 <template v-slot:prepend>
                   <span class="material-symbols-outlined"> mail </span>
@@ -59,11 +63,13 @@
             </div>
             <div v-else>
               <q-input
+                ref="inputNumFiche"
                 filled
                 type="number"
                 v-model="numfiche"
                 label="Número de ficha"
                 class="q-mb-md"
+                @keyup.enter="goConsult()"
               >
                 <template v-slot:prepend>
                   <span class="material-symbols-outlined"> 123 </span>
@@ -104,6 +110,18 @@ const role = ref(userStore.getRole());
 const router = useRouter();
 
 let loading = ref(false);
+
+// Refs para navegación con Enter
+let inputNumDocument = ref();
+let inputEmail = ref();
+let inputNumFiche = ref();
+
+// Función para navegar entre inputs con Enter
+function focusNextInput(target) {
+  if (target === 'email' && inputEmail.value) {
+    inputEmail.value.focus();
+  }
+}
 
 const cards = ref([
   {
