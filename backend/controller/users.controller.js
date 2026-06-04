@@ -36,7 +36,7 @@ userCtrl.loginUser = async (req, res) => {
   const { role, email, password } = req.body;
   let token = null;
   try {
-    if (role === "ADMIN" || role==="ETAPA PRODUCTIVA") {
+    if (role === "ADMIN" || role === "ETAPA PRODUCTIVA") {
       const user = await User.findOne({ email, status: 0 });
       if (!user) {
         return res.status(401).json({ msg: "Credenciales incorrectas" });

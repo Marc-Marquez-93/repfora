@@ -1,0 +1,82 @@
+import nodemailer from 'nodemailer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Configuración del transportador (SMTP)
+// Se predefine el host y el puerto (Gmail) para simplificar la configuración.
+const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, 
+    auth: {
+        user: process.env.FROM_EMAIL,
+        pass: process.env.SECURY_EMAIL,
+    },
+});
+
+/**
+ * Función universal para enviar correos con estilo institucional SENA.
+ * 
+ * @param {string} to - Correo del destinatario.
+ * @param {string} subject - Asunto del mensaje.
+ * @param {string} htmlContent - Cuerpo del mensaje en formato HTML.
+ */
+export const sendEmail = async (to, subject, htmlContent) => {
+    try {
+        // Ruta absoluta a la imagen del logo (usando CID para embeberla)
+        const logoPath = path.join(__dirname, '../../public/images/logoComites.png');
+
+        const mailOptions = {
+            from: `"SENA - COMITES" <${process.env.FROM_EMAIL}>`,
+            to,
+            subject,
+            html: `
+                <div style="background-color: #f9fafb; padding: 25px 12px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #212529; min-height: 100%;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); border: 1px solid #e5e7eb;">
+                        
+                        <!-- Header Institucional -->
+                        <div style="background-color: #ffffff; padding: 25px 15px; text-align: center; border-bottom: 6px solid #318335;">
+                            <img src="cid:logoSena" alt="SENA" style="width: 100px; height: auto;">
+                        </div>
+
+                        <!-- Cuerpo del Mensaje -->
+                        <div style="padding: 30px 20px; line-height: 1.6; font-size: 15px; color: #374151;">
+                            ${htmlContent}
+                        </div>
+
+                        <!-- Pie de Página Cuadro -->
+                        <div style="background-color: #318335; color: #ffffff; padding: 25px; text-align: center; font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">
+                            © COMITES - SENA
+                        </div>
+                    </div>
+
+                    <!-- Nota de Confidencialidad Externa -->
+                    <div style="max-width: 580px; margin: 30px auto; text-align: center; font-size: 12px; color: #000000; line-height: 1.6; font-style: italic; font-weight: 500;">
+                        Este correo electrónico y cualquier archivo adjunto son confidenciales y pueden contener información privilegiada. 
+                        Si usted no es el destinatario previsto, por favor notifique al remitente de inmediato y elimine este mensaje. 
+                        Cualquier divulgación, copia o distribución no autorizada está estrictamente prohibida.
+                        <br><br>
+                        Recibes este correo porque eres parte de la comunidad SENA y estás registrado en el sistema de comites de esta respetada institucion.
+                    </div>
+                </div>
+            `,
+            attachments: [
+                {
+                    filename: 'logo-sena.png',
+                    path: logoPath,
+                    cid: 'logoSena' // Referenciado en el <img> con src="cid:logoSena"
+                }
+            ]
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Correo enviado con éxito. ID:', info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('❌ Error al enviar el correo:', error);
+        return { success: false, error: error.message };
+    }
+};
