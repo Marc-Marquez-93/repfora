@@ -35,18 +35,47 @@
       <!-- 2. Título de sección -->
       <HeaderLayout title="Gestión de Comités" />
 
-      <!-- 3. Barra superior: botón Crear -->
-      <div class="row justify-center q-mb-md">
-        <div class="col-sm-2 col-md-1 col-12 justify-center flex justify-sm-start">
+      <!-- 3. Barra superior: buscador y botón Crear -->
+      <div class="row q-mb-md q-mx-md items-center">
+        <!-- Botón Crear (izquierda) -->
+        <div class="col-12 col-md-2">
           <q-btn
-            class="bg-green-9 text-white btn-press"
+            class="bg-green-9 text-white btn-press q-py-md"
             @click="abrirDialogCrear"
+            size="md"
           >
-            <span class="material-symbols-outlined q-mr-sm" style="font-size: 20px">
+            <span class="material-symbols-outlined q-mr-sm" style="font-size: 24px">
               add_circle
             </span>
-            Crear
+            Crear Comité
           </q-btn>
+        </div>
+
+        <!-- Buscador (derecha) -->
+        <div class="col-12 col-md-10 flex justify-end">
+          <div class="row q-col-gutter-sm items-center full-width">
+            <div class="col-12 col-md-9">
+              <q-input
+                filled
+                v-model="busquedaComite"
+                label="Buscar por número de ficha..."
+                clearable
+                @keyup.enter="filtrarComites"
+                @clear="limpiarFiltro"
+              >
+                <template v-slot:prepend>
+                  <span class="material-symbols-outlined">search</span>
+                </template>
+              </q-input>
+            </div>
+            <div class="col-12 col-md-3">
+              <q-btn
+                class="bg-green-9 text-white full-height btn-press"
+                label="Buscar"
+                @click="filtrarComites"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -57,7 +86,7 @@
             flat
             bordered
             no-data-label="Sin registros aún"
-            :rows="comitesRows"
+            :rows="comitesFiltrados"
             :columns="comitesColumns"
             row-key="_id"
             class="q-mx-md my-sticky-header-table comites-table"
@@ -1057,6 +1086,10 @@ const busquedaInstructor = ref("");
 const fichasResultados = ref([]);
 const instructoresResultados = ref([]);
 
+// Búsqueda de comités
+const busquedaComite = ref("");
+const comitesFiltrados = ref([]);
+
 // Datos del wizard
 const wizardData = ref({
   fichaId: "",
@@ -1427,20 +1460,46 @@ async function cargarComites() {
   try {
     loadingTable.value = true;
     const res = await get("/comites");
-    console.log("RESPUESTA COMITES:", res);
     const data = Array.isArray(res) ? res : (res?.data || []);
-    console.log("DATA PROCESADA:", data);
-    comitesRows.value = data.map(c => ({
+    const comitesConFicha = data.map(c => ({
       ...c,
       ficha: c.fiche?.number || 'N/A',
       nombrePrograma: c.fiche?.program?.name || 'Sin nombre',
     }));
-    console.log("COMITES ROWS:", comitesRows.value);
+    // Ordenar por createdAt descendente (más recientes primero)
+    comitesConFicha.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    comitesRows.value = comitesConFicha;
+    comitesFiltrados.value = [...comitesConFicha];
   } catch (error) {
     console.log("Error cargando comités:", error);
   } finally {
     loadingTable.value = false;
   }
+}
+
+function filtrarComites() {
+  if (!busquedaComite.value || busquedaComite.value.trim() === "") {
+    comitesFiltrados.value = [...comitesRows.value];
+    return;
+  }
+
+  const searchTerm = busquedaComite.value.trim().toLowerCase();
+  comitesFiltrados.value = comitesRows.value.filter(
+    comite => comite.ficha && comite.ficha.toLowerCase().includes(searchTerm)
+  );
+
+  if (comitesFiltrados.value.length === 0) {
+    $q.notify({
+      message: "No se encontraron comités con ese número de ficha",
+      color: "orange",
+      position: "top",
+    });
+  }
+}
+
+function limpiarFiltro() {
+  busquedaComite.value = "";
+  comitesFiltrados.value = [...comitesRows.value];
 }
 
 function verDatos(row) {
