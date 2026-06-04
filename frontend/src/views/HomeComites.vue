@@ -1377,6 +1377,7 @@ async function guardarComite() {
     const payload = {
       fiche: wizardData.value.fichaId,
       requestingInstructors: wizardData.value.instructores.map(i => i._id),
+      createdBy: userStore.getId(), // ID del instructor logueado que crea el comité
       learners: wizardData.value.aprendices.map(a => ({
         name: a.fullname,
         documentType: a.documentType,

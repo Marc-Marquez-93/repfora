@@ -36,11 +36,19 @@ export const storeUser = defineStore(
       return "USER";
     };
 
+    const getId = () => {
+      if (token.value) {
+        const decoded = jwt_decode(token.value);
+        return decoded.id;
+      }
+      return null;
+    };
+
     const getSuper = () => {
       if (token.value) {
         const decoded = jwt_decode(token.value);
         console.log(decoded);
-        
+
         return decoded.super;
       }
       return 0;
@@ -202,6 +210,7 @@ export const storeUser = defineStore(
       logoutUser,
       email,
       getRole,
+      getId,
       getSuper,
       allUsers,
       allUsersCoordinator,

@@ -14,6 +14,7 @@ committeeCtrl.getCommittees = async (req, res) => {
         populate: { path: "program" }
       })
       .populate("requestingInstructors")
+      .populate("createdBy")
       .populate("coordinator")
       .populate("invitedInstructors")
       .populate("wellnessRepresentative")
@@ -38,6 +39,7 @@ committeeCtrl.getCommitteeById = async (req, res) => {
         populate: { path: "program" }
       })
       .populate("requestingInstructors")
+      .populate("createdBy")
       .populate("coordinator")
       .populate("invitedInstructors")
       .populate("wellnessRepresentative")
@@ -63,6 +65,7 @@ committeeCtrl.registerCommittee = async (req, res) => {
     meetingDate,
     meetingTime,
     meetingLocation,
+    createdBy,
   } = req.body;
 
   try {
@@ -80,10 +83,19 @@ committeeCtrl.registerCommittee = async (req, res) => {
       }
     }
 
+    // Verificar que el instructor que crea existe
+    if (createdBy) {
+      const creator = await Instructor.findById(createdBy);
+      if (!creator) {
+        return res.status(400).json({ msg: "Instructor creador no encontrado" });
+      }
+    }
+
     // Crear el comité
     const newCommittee = new Committee({
       fiche,
       requestingInstructors,
+      createdBy: createdBy || requestingInstructors[0], // Usar createdBy o el primero de la lista
       learners: learners.map(learner => ({
         ...learner,
         decision: "PENDING",

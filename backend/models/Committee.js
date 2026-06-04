@@ -145,6 +145,12 @@ const CommitteeSchema = new Schema(
       }
     ], // Instructores que radican o solicitan el comité
 
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "Instructor",
+      required: true
+    }, // Instructor que creó/solicitó el comité (el que está logueado)
+
     // --- INTEGRANTES LOGÍSTICOS ---
     coordinator: {
       type: Schema.Types.ObjectId,
