@@ -117,6 +117,9 @@ export async function addLearnerOmission(req, res) {
     return res.status(400).json({ error: 'La justificación es obligatoria' });
   }
 
+  // Obtener el ID del usuario autenticado
+  const createdBy = req.user?.id || 'sistema';
+
   try {
     // Si se marca omitEverywhere, buscar todos los resultados donde aparece este aprendiz
     if (omitEverywhere) {
@@ -143,7 +146,7 @@ export async function addLearnerOmission(req, res) {
               ficheNumber: outcome.ficheNumber,
               outcomeText: outcome.outcomeText,
               justification: justification.trim(),
-              createdBy: req.headers['x-user-id'] || 'sistema'
+              createdBy
             },
             { upsert: true, new: true }
           );
@@ -174,7 +177,7 @@ export async function addLearnerOmission(req, res) {
         ficheNumber,
         outcomeText,
         justification: justification.trim(),
-        createdBy: req.headers['x-user-id'] || 'sistema'
+        createdBy
       },
       { upsert: true, new: true }
     );
@@ -199,6 +202,7 @@ export async function getOmissionsGrouped(req, res) {
   try {
     const omissions = await LearnerOmission.find()
       .select('schedule documentNumber learnerName ficheNumber outcomeText justification createdAt createdBy')
+      .populate('createdBy')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -238,6 +242,7 @@ export async function getScheduleOmissions(req, res) {
   try {
     const omissions = await LearnerOmission.find({ schedule: scheduleId })
       .select('documentNumber learnerName justification createdAt createdBy')
+      .populate('createdBy')
       .lean();
 
     res.json({ data: omissions });

@@ -26,7 +26,8 @@ const LearnerOmissionSchema = new Schema(
       default: 'Sin justificación'
     },
     createdBy: {
-      type: String, // Usuario que creó la omisión (opcional)
+      type: Schema.Types.ObjectId,
+      ref: "Instructor", // Usuario que creó la omisión (opcional)
     },
   },
   {

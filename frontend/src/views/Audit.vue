@@ -492,7 +492,7 @@
                         </div>
                         <div class="justification-meta">
                           {{ formatDateTime(o.createdAt)
-                          }}{{ o.createdBy ? ` · ${o.createdBy}` : "" }}
+                          }}{{ o.createdBy ? ` · ${getCreatorName(o.createdBy)}` : "" }}
                         </div>
                       </div>
                       <q-btn
@@ -2139,6 +2139,14 @@ function truncateText(text, maxLength) {
 function formatDate(dateStr) {
   if (!dateStr) return "Sin fecha";
   return new Date(dateStr).toLocaleDateString("es-CO");
+}
+
+function getCreatorName(createdBy) {
+  if (!createdBy) return "";
+  // Si es un string (compatibilidad con datos antiguos)
+  if (typeof createdBy === "string") return createdBy;
+  // Si es un objeto Instructor
+  return createdBy.name || createdBy.email || "Sistema";
 }
 
 function formatDateTime(dateStr) {

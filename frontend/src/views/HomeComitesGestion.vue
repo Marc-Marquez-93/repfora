@@ -709,39 +709,64 @@ const pendientesCount = computed(() => comitesPendientes.value.length);
 
 // Función para obtener instructores organizados (primero el createdBy, luego los demás)
 function getInstructoresOrganizados(comite) {
-  if (!comite.requestingInstructors || comite.requestingInstructors.length === 0) {
-    return [];
-  }
-
   const createdBy = comite.createdBy;
   const requestingInstructors = comite.requestingInstructors || [];
-
-  // Crear un array con el createdBy primero
   const instructores = [];
 
   if (createdBy) {
-    // Verificar si createdBy está en requestingInstructors
     const isInRequesting = requestingInstructors.some(i => i._id === createdBy._id);
 
     if (isInRequesting) {
-      // Primero el createdBy, luego los demás que no sean createdBy
-      instructores.push({ ...createdBy, esCreador: true });
+      instructores.push({
+        _id: createdBy._id,
+        name: createdBy.name,
+        numdocument: createdBy.numdocument,
+        tpdocument: createdBy.tpdocument,
+        email: createdBy.email,
+        esCreador: true
+      });
       requestingInstructors.forEach(i => {
         if (i._id !== createdBy._id) {
-          instructores.push({ ...i, esCreador: false });
+          instructores.push({
+            _id: i._id,
+            name: i.name,
+            numdocument: i.numdocument,
+            tpdocument: i.tpdocument,
+            email: i.email,
+            esCreador: false
+          });
         }
       });
     } else {
-      // createdBy no está en requestingInstructors, ponerlo primero y luego todos los requestingInstructors
-      instructores.push({ ...createdBy, esCreador: true });
+      instructores.push({
+        _id: createdBy._id,
+        name: createdBy.name,
+        numdocument: createdBy.numdocument,
+        tpdocument: createdBy.tpdocument,
+        email: createdBy.email,
+        esCreador: true
+      });
       requestingInstructors.forEach(i => {
-        instructores.push({ ...i, esCreador: false });
+        instructores.push({
+          _id: i._id,
+          name: i.name,
+          numdocument: i.numdocument,
+          tpdocument: i.tpdocument,
+          email: i.email,
+          esCreador: false
+        });
       });
     }
   } else {
-    // No hay createdBy, mostrar requestingInstructors normalmente
     requestingInstructors.forEach(i => {
-      instructores.push({ ...i, esCreador: false }));
+      instructores.push({
+        _id: i._id,
+        name: i.name,
+        numdocument: i.numdocument,
+        tpdocument: i.tpdocument,
+        email: i.email,
+        esCreador: false
+      });
     });
   }
 
@@ -972,17 +997,12 @@ onMounted(() => {
 });
 </script>
 
-<style>
-/* ========================================
-   Easing Curves (Emil Kowalski principles)
-   ======================================== */
-:root {
+<style scoped>
+/* Definir variables CSS locales para este componente */
+.gestion-comites {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
-</style>
-
-<style scoped>
 .gestion-comites {
   opacity: 0;
   animation: fadeIn 300ms var(--ease-out) forwards;

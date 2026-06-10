@@ -2,6 +2,7 @@ import { Router } from "express";
 import { comitesCtrl } from "../controller/comites.controller.js";
 import { comitesVali } from "../validations/comites.validation.js";
 import { committeeCtrl } from "../controller/committee.controller.js";
+import { authenticateComitesToken } from "../middlewares/authMiddleware.js";
 
 const {
   validateSendCode,
@@ -83,7 +84,9 @@ routerComites.post("/access/send-code", validateSendCode, sendCode);
  */
 routerComites.post("/access/verify-code", validateVerifyCode, verifyCode);
 
-// ==================== CRUD de Comités (Sin proteger por ahora) ====================
+// ==================== CRUD de Comités ====================
+// NOTA: Las rutas de lectura no requieren autenticación para facilitar el acceso
+// Las rutas de escritura están protegidas con authenticateComitesToken
 
 /**
  * @swagger
@@ -147,6 +150,42 @@ routerComites.get("/fiche/:ficheId", getCommitteesByFiche);
 
 /**
  * @swagger
+ * /api/comites/search/fiches:
+ *   get:
+ *     summary: Buscar fichas por número
+ *     tags: [Comites]
+ *     parameters:
+ *       - in: query
+ *         name: number
+ *         schema:
+ *           type: string
+ *         description: Número de ficha a buscar
+ *     responses:
+ *       200:
+ *         description: Lista de fichas encontradas
+ */
+routerComites.get("/search/fiches", searchFiches);
+
+/**
+ * @swagger
+ * /api/comites/search/instructors:
+ *   get:
+ *     summary: Buscar instructores por nombre o documento
+ *     tags: [Comites]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Texto a buscar en nombre o documento
+ *     responses:
+ *       200:
+ *         description: Lista de instructores encontrados
+ */
+routerComites.get("/search/instructors", searchInstructors);
+
+/**
+ * @swagger
  * /api/comites/:id:
  *   get:
  *     summary: Obtiene un comité por ID
@@ -169,8 +208,10 @@ routerComites.get("/:id", getCommitteeById);
  * @swagger
  * /api/comites:
  *   post:
- *     summary: Crea un nuevo comité
+ *     summary: Crea un nuevo comité (requiere autenticación)
  *     tags: [Comites]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -201,15 +242,19 @@ routerComites.get("/:id", getCommitteeById);
  *         description: Comité creado correctamente
  *       400:
  *         description: Error al crear comité
+ *       401:
+ *         description: No autorizado
  */
-routerComites.post("/", registerCommittee);
+routerComites.post("/", authenticateComitesToken, registerCommittee);
 
 /**
  * @swagger
  * /api/comites/:id:
  *   put:
- *     summary: Actualiza un comité
+ *     summary: Actualiza un comité (requiere autenticación)
  *     tags: [Comites]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -238,15 +283,19 @@ routerComites.post("/", registerCommittee);
  *         description: Comité actualizado correctamente
  *       404:
  *         description: Comité no encontrado
+ *       401:
+ *         description: No autorizado
  */
-routerComites.put("/:id", updateCommittee);
+routerComites.put("/:id", authenticateComitesToken, updateCommittee);
 
 /**
  * @swagger
  * /api/comites/:id/cancel:
  *   put:
- *     summary: Cancela un comité
+ *     summary: Cancela un comité (requiere autenticación)
  *     tags: [Comites]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -258,8 +307,10 @@ routerComites.put("/:id", updateCommittee);
  *         description: Comité cancelado correctamente
  *       404:
  *         description: Comité no encontrado
+ *       401:
+ *         description: No autorizado
  */
-routerComites.put("/:id/cancel", cancelCommittee);
+routerComites.put("/:id/cancel", authenticateComitesToken, cancelCommittee);
 
 // ==================== Búsquedas para comités ====================
 

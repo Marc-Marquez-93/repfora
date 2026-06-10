@@ -410,17 +410,44 @@
                           v-for="(instructor, index) in wizardData.instructores"
                           :key="instructor._id"
                           class="q-pa-sm"
+                          :class="{ 'instructor-bloqueado': instructor.esBloqueado }"
                           :style="{ animationDelay: `${index * 30}ms` }"
                         >
                           <q-item-section avatar>
-                            <q-icon name="person" color="green-9" />
+                            <q-icon
+                              :name="instructor.esBloqueado ? 'lock' : 'person'"
+                              :color="instructor.esBloqueado ? 'green-8' : 'green-9'"
+                            />
                           </q-item-section>
                           <q-item-section>
-                            <q-item-label class="text-weight-bold">{{ instructor.name }}</q-item-label>
+                            <q-item-label class="text-weight-bold">
+                              {{ instructor.name }}
+                              <q-badge
+                                v-if="instructor.esBloqueado"
+                                label="Tú"
+                                color="green-9"
+                                class="q-ml-sm"
+                                style="font-size: 10px; vertical-align: middle;"
+                              />
+                            </q-item-label>
                             <q-item-label caption>{{ instructor.tpdocument || 'CC' }}: {{ instructor.numdocument }}</q-item-label>
                           </q-item-section>
                           <q-item-section side>
-                            <q-btn flat round color="red" icon="close" class="btn-press" @click="eliminarInstructor(instructor._id)" />
+                            <!-- No mostrar botón eliminar para el instructor bloqueado (el que solicitó) -->
+                            <q-btn
+                              v-if="!instructor.esBloqueado"
+                              flat round color="red" icon="close"
+                              class="btn-press"
+                              @click="eliminarInstructor(instructor._id)"
+                            />
+                            <q-icon
+                              v-else
+                              name="verified_user"
+                              color="green-7"
+                              size="20px"
+                            >
+                              <q-tooltip>Este instructor es el solicitante del comité y no puede ser eliminado</q-tooltip>
+                            </q-icon>
                           </q-item-section>
                         </q-item>
                       </q-list>
@@ -1079,6 +1106,7 @@ const loadingAprendiz = ref(false);
 const loadingTable = ref(true);
 const busquedaFichaRealizada = ref(false);
 const busquedaInstructorRealizada = ref(false);
+const instructorActual = ref(null); // Instructor logueado que solicita el comité
 
 // Búsquedas
 const busquedaFicha = ref("");
@@ -1154,9 +1182,9 @@ const indexOfAprendizActual = computed(() => {
 });
 
 // Funciones
-function abrirDialogCrear() {
+async function abrirDialogCrear() {
   step.value = 1;
-  limpiarWizard();
+  await limpiarWizard();
   prompt.value = true;
 }
 
@@ -1276,10 +1304,7 @@ function validarPaso1() {
     $q.notify({ message: "Por favor selecciona una ficha", color: "red", position: "top" });
     return;
   }
-  if (wizardData.value.instructores.length === 0) {
-    $q.notify({ message: "Por favor agrega al menos un instructor", color: "red", position: "top" });
-    return;
-  }
+  // Ya no es obligatorio agregar instructores adicionales porque el createdBy (quien crea) ya es un instructor
   step.value = 2;
 }
 
@@ -1377,7 +1402,7 @@ async function guardarComite() {
     const payload = {
       fiche: wizardData.value.fichaId,
       requestingInstructors: wizardData.value.instructores.map(i => i._id),
-      createdBy: userStore.getId(), // ID del instructor logueado que crea el comité
+      // NOTA: createdBy se obtiene del token en el backend, no se envía en el body
       learners: wizardData.value.aprendices.map(a => ({
         name: a.fullname,
         documentType: a.documentType,
@@ -1406,7 +1431,7 @@ async function guardarComite() {
   }
 }
 
-function limpiarWizard() {
+async function limpiarWizard() {
   wizardData.value = {
     fichaId: "",
     ficha: "",
@@ -1428,6 +1453,45 @@ function limpiarWizard() {
   busquedaInstructor.value = "";
   busquedaFichaRealizada.value = false;
   busquedaInstructorRealizada.value = false;
+
+  // Cargar instructor actual y pre-agregarlo como bloqueado
+  await cargarInstructorActual();
+}
+
+async function cargarInstructorActual() {
+  try {
+    const userId = userStore.getId();
+    const userRole = userStore.getRole();
+
+    if (!userId) return;
+
+    // Obtener información del instructor actual
+    let res;
+    if (userRole === 'INSTRUCTOR') {
+      res = await get(`/instructors/${userId}`);
+    } else {
+      // Si no es instructor, buscar en lista de instructores
+      const instructors = await get('/instructors');
+      const instructorList = Array.isArray(instructors) ? instructors : (instructors?.data || []);
+      const found = instructorList.find(i => i._id === userId || i.numdocument === userId);
+      res = found || null;
+    }
+
+    if (res) {
+      instructorActual.value = res;
+      // Pre-agregar instructor actual como bloqueado
+      wizardData.value.instructores.push({
+        _id: res._id,
+        name: res.name,
+        numdocument: res.numdocument,
+        tpdocument: res.tpdocument,
+        email: res.email,
+        esBloqueado: true // Marcar como bloqueado
+      });
+    }
+  } catch (error) {
+    console.log("Error cargando instructor actual:", error);
+  }
 }
 
 function formatDate(dateStr) {
@@ -1888,6 +1952,14 @@ onMounted(() => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ========================================
+   Instructor bloqueado (solicitante del comité)
+   ======================================== */
+.instructor-bloqueado {
+  background: linear-gradient(90deg, rgba(46, 125, 50, 0.06) 0%, transparent 100%);
+  border-left: 3px solid #2e7d32;
 }
 
 /* ========================================

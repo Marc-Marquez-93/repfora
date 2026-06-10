@@ -28,6 +28,7 @@ import {
   getResumenPorCoordinacionZIP,
   getComparacion
 } from '../controller/auditoria.controller.js';
+import { authenticateToken } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
@@ -200,9 +201,11 @@ router.get('/vencidos/coordinacion/:coordinationId', getVencidosGroupedByCoordin
  * @swagger
  * /api/auditoria/omisiones:
  *   post:
- *     summary: Agrega una omisión de aprendiz
+ *     summary: Agrega una omisión de aprendiz (requiere autenticación)
  *     description: Registra que un aprendiz no asistió a una clase programada.
  *     tags: [Auditoría]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -242,8 +245,10 @@ router.get('/vencidos/coordinacion/:coordinationId', getVencidosGroupedByCoordin
  *                 msg:
  *                   type: string
  *                   example: "Omisión registrada correctamente"
+ *       401:
+ *         description: No autorizado
  */
-router.post('/omisiones', addLearnerOmission);
+router.post('/omisiones', authenticateToken, addLearnerOmission);
 
 /**
  * @swagger
@@ -325,9 +330,11 @@ router.get('/omisiones/:scheduleId', getScheduleOmissions);
  * @swagger
  * /api/auditoria/omisiones/{scheduleId}/{learnerDocument}:
  *   delete:
- *     summary: Elimina una omisión de aprendiz
+ *     summary: Elimina una omisión de aprendiz (requiere autenticación)
  *     description: Elimina el registro de omisión de un aprendiz específico en un horario.
  *     tags: [Auditoría]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: scheduleId
@@ -354,8 +361,10 @@ router.get('/omisiones/:scheduleId', getScheduleOmissions);
  *                 msg:
  *                   type: string
  *                   example: "Omisión eliminada correctamente"
+ *       401:
+ *         description: No autorizado
  */
-router.delete('/omisiones/:scheduleId/:learnerDocument', removeLearnerOmission);
+router.delete('/omisiones/:scheduleId/:learnerDocument', authenticateToken, removeLearnerOmission);
 
 /**
  * @swagger

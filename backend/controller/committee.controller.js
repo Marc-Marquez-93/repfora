@@ -65,7 +65,6 @@ committeeCtrl.registerCommittee = async (req, res) => {
     meetingDate,
     meetingTime,
     meetingLocation,
-    createdBy,
   } = req.body;
 
   try {
@@ -83,19 +82,24 @@ committeeCtrl.registerCommittee = async (req, res) => {
       }
     }
 
+    // Usar el usuario autenticado del token como createdBy
+    const createdBy = req.user?.id;
+
+    if (!createdBy) {
+      return res.status(401).json({ msg: "No se pudo identificar al usuario autenticado" });
+    }
+
     // Verificar que el instructor que crea existe
-    if (createdBy) {
-      const creator = await Instructor.findById(createdBy);
-      if (!creator) {
-        return res.status(400).json({ msg: "Instructor creador no encontrado" });
-      }
+    const creator = await Instructor.findById(createdBy);
+    if (!creator) {
+      return res.status(400).json({ msg: "Instructor creador no encontrado" });
     }
 
     // Crear el comité
     const newCommittee = new Committee({
       fiche,
       requestingInstructors,
-      createdBy: createdBy || requestingInstructors[0], // Usar createdBy o el primero de la lista
+      createdBy, // Usuario autenticado
       learners: learners.map(learner => ({
         ...learner,
         decision: "PENDING",
@@ -233,6 +237,7 @@ committeeCtrl.getCommitteesByFiche = async (req, res) => {
         populate: { path: "program" }
       })
       .populate("requestingInstructors")
+      .populate("createdBy")
       .sort({ createdAt: -1 });
 
     res.json(committees);
@@ -251,6 +256,7 @@ committeeCtrl.getPendingCommittees = async (req, res) => {
         populate: { path: "program" }
       })
       .populate("requestingInstructors")
+      .populate("createdBy")
       .sort({ createdAt: -1 });
 
     res.json(committees);
@@ -269,6 +275,7 @@ committeeCtrl.getScheduledCommittees = async (req, res) => {
         populate: { path: "program" }
       })
       .populate("requestingInstructors")
+      .populate("createdBy")
       .sort({ meetingDate: 1 });
 
     res.json(committees);
