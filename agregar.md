@@ -1,6 +1,6 @@
-Coordinador: select de usre con rol cordinator --- SELECT
+Coordinador: select de users con rol coordinator --- SELECT
 
-Instructores: reutilizar instructores --- BUSCADOR
+Instructores invitados (no obligatorio en estado pendiente, en estado de agendados si): reutilizar instructores --- BUSCADOR
 
 Bienestar al apren: instructores con knowledge: "INSTITUCIONAL DE PEDAGOGÍA" --- BUSCADOR
 

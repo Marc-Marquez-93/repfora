@@ -67,13 +67,14 @@
                     <!-- Aprendices -->
                     <div class="col">
                       <div class="row items-center q-gutter-xs no-wrap">
-                        <span class="text-caption text-grey-7">Aprendices:</span>
+                        <span class="text-caption text-grey-7" style="font-size: 14px;">Aprendices:</span>
                         <q-chip
                           v-for="(learner, idx) in comite.learners.slice(0, 3)"
                           :key="'l-'+idx"
                           size="sm"
                           class="bg-orange-1 text-orange-9"
                           dense
+                          style="font-size: 14px;"
                         >
                           {{ learner.name }}
                           <q-tooltip>{{ learner.documentType }}: {{ learner.documentNumber }}</q-tooltip>
@@ -89,14 +90,15 @@
 
                     <!-- Instructores -->
                     <div class="col">
-                      <div class="row items-center q-gutter-xs no-wrap">
-                        <span class="text-caption text-grey-7">Instructores:</span>
+                      <div class="row items-center q-gutter-xs">
+                        <span class="text-caption text-grey-7 q-mr-xs" style="font-size: 14px;">Instructores:</span>
                         <q-chip
                           v-for="(instructor, idx) in getInstructoresOrganizados(comite).slice(0, 2)"
                           :key="'i-'+idx"
                           size="sm"
                           :class="instructor.esCreador ? 'bg-green-9 text-white' : 'bg-green-1 text-green-9'"
                           dense
+                          style="font-size: 14px;"
                         >
                           <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">person</span>
                           {{ instructor.name }}
@@ -189,13 +191,14 @@
                     <!-- Aprendices -->
                     <div class="col">
                       <div class="row items-center q-gutter-xs no-wrap">
-                        <span class="text-caption text-grey-7">Aprendices:</span>
+                        <span class="text-caption text-grey-7" style="font-size: 14px;">Aprendices:</span>
                         <q-chip
                           v-for="(learner, idx) in comite.learners.slice(0, 3)"
                           :key="'l-'+idx"
                           size="sm"
                           class="bg-blue-2 text-blue-9"
                           dense
+                          style="font-size: 14px;"
                         >
                           {{ learner.name }}
                         </q-chip>
@@ -210,14 +213,15 @@
 
                     <!-- Instructores -->
                     <div class="col">
-                      <div class="row items-center q-gutter-xs no-wrap">
-                        <span class="text-caption text-grey-7">Instructores:</span>
+                      <div class="row items-center q-gutter-xs">
+                        <span class="text-caption text-grey-7 q-mr-xs" style="font-size: 14px;">Instructores:</span>
                         <q-chip
                           v-for="(instructor, idx) in getInstructoresOrganizados(comite).slice(0, 2)"
                           :key="'i-'+idx"
                           size="sm"
                           :class="instructor.esCreador ? 'bg-green-9 text-white' : 'bg-green-1 text-green-9'"
                           dense
+                          style="font-size: 14px;"
                         >
                           <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">person</span>
                           {{ instructor.name }}
@@ -319,13 +323,14 @@
                     <!-- Aprendices -->
                     <div class="col">
                       <div class="row items-center q-gutter-xs no-wrap">
-                        <span class="text-caption text-grey-7">Aprendices:</span>
+                        <span class="text-caption text-grey-7" style="font-size: 14px;">Aprendices:</span>
                         <q-chip
                           v-for="(learner, idx) in comite.learners.slice(0, 3)"
                           :key="'l-'+idx"
                           size="sm"
                           class="bg-green-2 text-green-9"
                           dense
+                          style="font-size: 14px;"
                         >
                           {{ learner.name }}
                         </q-chip>
@@ -340,14 +345,15 @@
 
                     <!-- Instructores -->
                     <div class="col">
-                      <div class="row items-center q-gutter-xs no-wrap">
-                        <span class="text-caption text-grey-7">Instructores:</span>
+                      <div class="row items-center q-gutter-xs">
+                        <span class="text-caption text-grey-7 q-mr-xs" style="font-size: 14px;">Instructores:</span>
                         <q-chip
                           v-for="(instructor, idx) in getInstructoresOrganizados(comite).slice(0, 2)"
                           :key="'i-'+idx"
                           size="sm"
                           :class="instructor.esCreador ? 'bg-green-9 text-white' : 'bg-green-1 text-green-9'"
                           dense
+                          style="font-size: 14px;"
                         >
                           <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">person</span>
                           {{ instructor.name }}
@@ -394,7 +400,7 @@
 
     <!-- Dialog: Agendar Reunión -->
     <q-dialog v-model="dialogAgendar" persistent>
-      <q-card class="dialog-card">
+      <q-card class="dialog-card dialog-card-large">
         <q-card-section class="bg-green-9 dialog-header">
           <div class="row items-center">
             <div class="col-10">
@@ -416,64 +422,403 @@
             <div class="text-caption text-grey-7">{{ comiteSeleccionado.nombrePrograma }}</div>
           </div>
 
-          <div class="row q-col-gutter-md q-mt-md">
-            <div class="col-12 col-md-6">
-              <q-input
-                filled
-                v-model="agendamiento.fecha"
-                label="Fecha de reunión *"
-                type="date"
-                :min="fechaMinima"
-              >
-                <template v-slot:prepend>
-                  <span class="material-symbols-outlined">calendar_today</span>
-                </template>
-              </q-input>
-            </div>
-            <div class="col-12 col-md-6">
-              <q-input
-                filled
-                v-model="agendamiento.hora"
-                label="Hora *"
-                type="time"
-              >
-                <template v-slot:prepend>
-                  <span class="material-symbols-outlined">schedule</span>
-                </template>
-              </q-input>
-            </div>
-            <div class="col-12">
-              <q-input
-                filled
-                v-model="agendamiento.lugar"
-                label="Lugar de reunión *"
-                placeholder="Ej: Sala de juntas 1, Edificio B"
-              >
-                <template v-slot:prepend>
-                  <span class="material-symbols-outlined">location_on</span>
-                </template>
-              </q-input>
-            </div>
-          </div>
+          <q-stepper v-model="pasoAgendar" color="green-9" animated flat>
+            <!-- PASO 1: Datos de la Reunión y Asistentes -->
+            <q-step
+              :name="1"
+              title="Datos de la Reunión"
+              icon="event"
+              :done="pasoAgendar > 1"
+            >
+              <div class="row q-col-gutter-md q-mt-md">
+                <!-- Fecha y Hora -->
+                <div class="col-12 col-md-6">
+                  <q-input
+                    filled
+                    v-model="agendamiento.fecha"
+                    label="Fecha de reunión *"
+                    type="date"
+                    :min="fechaMinima"
+                  >
+                    <template v-slot:prepend>
+                      <span class="material-symbols-outlined">calendar_today</span>
+                    </template>
+                  </q-input>
+                </div>
+                <div class="col-12 col-md-6">
+                  <q-input
+                    filled
+                    v-model="agendamiento.hora"
+                    label="Hora *"
+                    type="time"
+                  >
+                    <template v-slot:prepend>
+                      <span class="material-symbols-outlined">schedule</span>
+                    </template>
+                  </q-input>
+                </div>
+
+                <!-- Lugar -->
+                <div class="col-12">
+                  <q-input
+                    filled
+                    v-model="agendamiento.lugar"
+                    label="Lugar de reunión *"
+                    placeholder="Ej: Sala de juntas 1, Edificio B"
+                  >
+                    <template v-slot:prepend>
+                      <span class="material-symbols-outlined">location_on</span>
+                    </template>
+                  </q-input>
+                </div>
+
+                <!-- Coordinador -->
+                <div class="col-12 col-md-6">
+                  <q-select
+                    filled
+                    v-model="agendamiento.coordinador"
+                    :options="coordinadores"
+                    option-label="name"
+                    option-value="_id"
+                    emit-value
+                    map-options
+                    label="Coordinador *"
+                    :loading="cargando"
+                  >
+                    <template v-slot:prepend>
+                      <span class="material-symbols-outlined">person</span>
+                    </template>
+                  </q-select>
+                </div>
+
+                <!-- Novedades -->
+                <div class="col-12 col-md-6">
+                  <q-select
+                    filled
+                    v-model="agendamiento.novedades"
+                    :options="usuariosNovedades"
+                    option-label="name"
+                    option-value="_id"
+                    emit-value
+                    map-options
+                    label="Novedades *"
+                    :loading="cargando"
+                  >
+                    <template v-slot:prepend>
+                      <span class="material-symbols-outlined">badge</span>
+                    </template>
+                  </q-select>
+                </div>
+
+                <!-- Instructor Invitado (máximo 1) -->
+                <div class="col-12">
+                  <div class="text-subtitle2 text-weight-bold text-green-9 q-mb-sm">Instructor Invitado (opcional - máximo 1)</div>
+
+                  <!-- Instructor agregado -->
+                  <div v-if="agendamiento.instructoresInvitados.length > 0" class="q-mb-sm">
+                    <q-chip
+                      removable
+                      @remove="eliminarInstructorInvitado(agendamiento.instructoresInvitados[0]._id)"
+                      class="bg-green-1 text-green-9"
+                    >
+                      {{ agendamiento.instructoresInvitados[0].name }}
+                    </q-chip>
+                  </div>
+
+                  <!-- Buscador -->
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12 col-md-10">
+                      <q-input
+                        filled
+                        v-model="busquedaInstructorInvitado"
+                        label="Buscar instructor..."
+                        @keyup.enter="buscarInstructorInvitado"
+                        :loading="loadingInstructoresInvitados"
+                        :disable="agendamiento.instructoresInvitados.length >= 1"
+                        clearable
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">person_search</span>
+                        </template>
+                      </q-input>
+                    </div>
+                    <div class="col-12 col-md-2">
+                      <q-btn
+                        class="bg-green-9 text-white full-height btn-press"
+                        label="Buscar"
+                        @click="buscarInstructorInvitado"
+                        :loading="loadingInstructoresInvitados"
+                        :disable="agendamiento.instructoresInvitados.length >= 1"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Resultados -->
+                  <div v-if="instructoresInvitadosResultados.length > 0" class="q-mt-sm">
+                    <q-card flat bordered class="bg-green-1">
+                      <q-list separator>
+                        <q-item
+                          v-for="(instructor, idx) in instructoresInvitadosResultados"
+                          :key="idx"
+                          clickable
+                          @click="agregarInstructorInvitado(instructor)"
+                          class="q-pa-sm"
+                        >
+                          <q-item-section avatar>
+                            <q-icon name="person" color="green-9" />
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label class="text-weight-bold">{{ instructor.name }}</q-item-label>
+                            <q-item-label caption>{{ instructor.tpdocument || 'CC' }}: {{ instructor.numdocument }}</q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <q-icon name="add_circle" color="green-9" size="28px" />
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-card>
+                  </div>
+                </div>
+
+                <!-- Bienestar al Aprendiz -->
+                <div class="col-12">
+                  <div class="text-subtitle2 text-weight-bold text-green-9 q-mb-sm">Bienestar al Aprendiz * (obligatorio)</div>
+
+                  <!-- Bienestar seleccionado -->
+                  <div v-if="agendamiento.bienestar" class="q-mb-sm">
+                    <q-chip
+                      removable
+                      @remove="agendamiento.bienestar = null"
+                      class="bg-blue-1 text-blue-9"
+                    >
+                      <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">person</span>
+                      {{ agendamiento.bienestar.name }}
+                    </q-chip>
+                  </div>
+
+                  <!-- Buscador -->
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12 col-md-10">
+                      <q-input
+                        filled
+                        v-model="busquedaBienestar"
+                        label="Buscar instructor de bienestar..."
+                        @keyup.enter="buscarBienestar"
+                        :loading="loadingBienestar"
+                        :disable="!!agendamiento.bienestar"
+                        clearable
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">school</span>
+                        </template>
+                      </q-input>
+                    </div>
+                    <div class="col-12 col-md-2">
+                      <q-btn
+                        class="bg-green-9 text-white full-height btn-press"
+                        label="Buscar"
+                        @click="buscarBienestar"
+                        :loading="loadingBienestar"
+                        :disable="!!agendamiento.bienestar"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Resultados -->
+                  <div v-if="bienestarResultados.length > 0" class="q-mt-sm">
+                    <q-card flat bordered class="bg-blue-1">
+                      <q-list separator>
+                        <q-item
+                          v-for="(instructor, idx) in bienestarResultados"
+                          :key="idx"
+                          clickable
+                          @click="seleccionarBienestar(instructor)"
+                          class="q-pa-sm"
+                        >
+                          <q-item-section avatar>
+                            <q-icon name="school" color="blue-9" />
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label class="text-weight-bold">{{ instructor.name }}</q-item-label>
+                            <q-item-label caption>{{ instructor.knowledge }}</q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <q-icon name="add_circle" color="blue-9" size="28px" />
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-card>
+                  </div>
+                </div>
+              </div>
+            </q-step>
+
+            <!-- PASO 2: Roles y Participantes Adicionales -->
+            <q-step
+              :name="2"
+              title="Roles y Participantes"
+              icon="groups"
+            >
+              <div class="row q-col-gutter-md q-mt-md">
+                <!-- Vocero -->
+                <div class="col-12">
+                  <div class="text-subtitle2 text-weight-bold text-green-9 q-mb-sm">Vocero *</div>
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12 col-md-6">
+                      <q-input
+                        filled
+                        v-model="agendamiento.vocero"
+                        label="Nombre completo *"
+                        placeholder="Ej: Juan Pérez"
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">record_voice_over</span>
+                        </template>
+                      </q-input>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <q-input
+                        filled
+                        v-model="agendamiento.voceroCorreo"
+                        label="Correo electrónico *"
+                        type="email"
+                        placeholder="Ej: juan.perez@sena.edu.co"
+                        :rules="[val => !val || val.includes('@') || 'El correo debe contener @']"
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">email</span>
+                        </template>
+                      </q-input>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Representante -->
+                <div class="col-12">
+                  <div class="text-subtitle2 text-weight-bold text-green-9 q-mb-sm">Representante *</div>
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12 col-md-6">
+                      <q-input
+                        filled
+                        v-model="agendamiento.representante"
+                        label="Nombre completo *"
+                        placeholder="Ej: María González"
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">supervisor_account</span>
+                        </template>
+                      </q-input>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <q-input
+                        filled
+                        v-model="agendamiento.representanteCorreo"
+                        label="Correo electrónico *"
+                        type="email"
+                        placeholder="Ej: maria.gonzalez@sena.edu.co"
+                        :rules="[val => !val || val.includes('@') || 'El correo debe contener @']"
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">email</span>
+                        </template>
+                      </q-input>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Participantes Adicionales -->
+                <div class="col-12">
+                  <div class="text-subtitle2 text-weight-bold text-green-9 q-mb-sm">Participantes Adicionales (opcional)</div>
+
+                  <div v-if="agendamiento.participantesAdicionales.length === 0" class="q-mb-md text-grey-6 text-caption">
+                    No hay participantes adicionales agregados
+                  </div>
+
+                  <div v-for="(participante, idx) in agendamiento.participantesAdicionales" :key="idx" class="q-mb-md">
+                    <div class="bg-green-1 q-pa-md rounded-borders">
+                      <div class="text-subtitle2 text-green-9 q-mb-sm">Participante {{ idx + 1 }}</div>
+                      <div class="row q-col-gutter-sm">
+                        <div class="col-12 col-md-5">
+                          <q-input
+                            filled
+                            v-model="participante.nombre"
+                            label="Nombre completo *"
+                            placeholder="Nombre del participante"
+                            dense
+                          />
+                        </div>
+                        <div class="col-12 col-md-5">
+                          <q-input
+                            filled
+                            v-model="participante.correo"
+                            label="Correo electrónico"
+                            type="email"
+                            placeholder="correo@ejemplo.com"
+                            dense
+                            :rules="[val => !val || val.includes('@') || 'El correo debe contener @']"
+                          />
+                        </div>
+                        <div class="col-12 col-md-2 flex items-center justify-end">
+                          <q-btn
+                            round
+                            color="red"
+                            icon="delete"
+                            size="sm"
+                            @click="eliminarParticipanteAdicional(idx)"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <q-btn
+                    flat
+                    color="green-9"
+                    icon="add_circle"
+                    label="Agregar participante adicional"
+                    @click="agregarParticipanteAdicional"
+                    class="q-mt-sm"
+                  />
+                </div>
+              </div>
+            </q-step>
+          </q-stepper>
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancelar" class="btn-press" @click="cerrarDialogAgendar" />
           <q-btn
-            unelevated
+            v-if="pasoAgendar === 1"
+            flat
             color="green-9"
-            label="Agendar"
-            @click="guardarAgendamiento"
-            :loading="guardando"
+            label="Siguiente"
+            @click="validarPaso1"
             class="btn-press"
           />
+          <template v-else>
+            <q-btn
+              flat
+              color="grey-7"
+              label="Atrás"
+              @click="pasoAgendar = 1"
+              class="btn-press q-mr-sm"
+            />
+            <q-btn
+              unelevated
+              color="green-9"
+              label="Agendar"
+              @click="guardarAgendamiento"
+              :loading="guardando"
+              class="btn-press"
+            />
+          </template>
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <!-- Dialog: Modificar Agendamiento -->
     <q-dialog v-model="dialogModificar" persistent>
-      <q-card class="dialog-card">
+      <q-card class="dialog-card dialog-card-large">
         <q-card-section class="bg-blue-9 dialog-header">
           <div class="row items-center">
             <div class="col-10">
@@ -495,56 +840,392 @@
             <div class="text-caption text-grey-7">{{ comiteSeleccionado.nombrePrograma }}</div>
           </div>
 
-          <div class="row q-col-gutter-md q-mt-md">
-            <div class="col-12 col-md-6">
-              <q-input
-                filled
-                v-model="agendamiento.fecha"
-                label="Fecha de reunión *"
-                type="date"
-                :min="fechaMinima"
-              >
-                <template v-slot:prepend>
-                  <span class="material-symbols-outlined">calendar_today</span>
-                </template>
-              </q-input>
-            </div>
-            <div class="col-12 col-md-6">
-              <q-input
-                filled
-                v-model="agendamiento.hora"
-                label="Hora *"
-                type="time"
-              >
-                <template v-slot:prepend>
-                  <span class="material-symbols-outlined">schedule</span>
-                </template>
-              </q-input>
-            </div>
-            <div class="col-12">
-              <q-input
-                filled
-                v-model="agendamiento.lugar"
-                label="Lugar de reunión *"
-              >
-                <template v-slot:prepend>
-                  <span class="material-symbols-outlined">location_on</span>
-                </template>
-              </q-input>
-            </div>
-          </div>
+          <q-stepper v-model="pasoAgendar" color="blue-9" animated flat>
+            <!-- PASO 1: Datos de la Reunión y Asistentes -->
+            <q-step
+              :name="1"
+              title="Datos de la Reunión"
+              icon="event"
+              :done="pasoAgendar > 1"
+            >
+              <div class="row q-col-gutter-md q-mt-md">
+                <!-- Fecha y Hora -->
+                <div class="col-12 col-md-6">
+                  <q-input
+                    filled
+                    v-model="agendamiento.fecha"
+                    label="Fecha de reunión *"
+                    type="date"
+                    :min="fechaMinima"
+                  >
+                    <template v-slot:prepend>
+                      <span class="material-symbols-outlined">calendar_today</span>
+                    </template>
+                  </q-input>
+                </div>
+                <div class="col-12 col-md-6">
+                  <q-input
+                    filled
+                    v-model="agendamiento.hora"
+                    label="Hora *"
+                    type="time"
+                  >
+                    <template v-slot:prepend>
+                      <span class="material-symbols-outlined">schedule</span>
+                    </template>
+                  </q-input>
+                </div>
+
+                <!-- Lugar -->
+                <div class="col-12">
+                  <q-input
+                    filled
+                    v-model="agendamiento.lugar"
+                    label="Lugar de reunión *"
+                  >
+                    <template v-slot:prepend>
+                      <span class="material-symbols-outlined">location_on</span>
+                    </template>
+                  </q-input>
+                </div>
+
+                <!-- Coordinador -->
+                <div class="col-12 col-md-6">
+                  <q-select
+                    filled
+                    v-model="agendamiento.coordinador"
+                    :options="coordinadores"
+                    option-label="name"
+                    option-value="_id"
+                    emit-value
+                    map-options
+                    label="Coordinador"
+                    :loading="cargando"
+                  >
+                    <template v-slot:prepend>
+                      <span class="material-symbols-outlined">person</span>
+                    </template>
+                  </q-select>
+                </div>
+
+                <!-- Novedades -->
+                <div class="col-12 col-md-6">
+                  <q-select
+                    filled
+                    v-model="agendamiento.novedades"
+                    :options="usuariosNovedades"
+                    option-label="name"
+                    option-value="_id"
+                    emit-value
+                    map-options
+                    label="Novedades"
+                    :loading="cargando"
+                  >
+                    <template v-slot:prepend>
+                      <span class="material-symbols-outlined">badge</span>
+                    </template>
+                  </q-select>
+                </div>
+
+                <!-- Instructor Invitado (máximo 1) -->
+                <div class="col-12">
+                  <div class="text-subtitle2 text-weight-bold text-blue-9 q-mb-sm">Instructor Invitado (opcional - máximo 1)</div>
+
+                  <!-- Instructor agregado -->
+                  <div v-if="agendamiento.instructoresInvitados.length > 0" class="q-mb-sm">
+                    <q-chip
+                      removable
+                      @remove="eliminarInstructorInvitado(agendamiento.instructoresInvitados[0]._id)"
+                      class="bg-blue-1 text-blue-9"
+                    >
+                      {{ agendamiento.instructoresInvitados[0].name }}
+                    </q-chip>
+                  </div>
+
+                  <!-- Buscador -->
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12 col-md-10">
+                      <q-input
+                        filled
+                        v-model="busquedaInstructorInvitado"
+                        label="Buscar instructor..."
+                        @keyup.enter="buscarInstructorInvitado"
+                        :loading="loadingInstructoresInvitados"
+                        :disable="agendamiento.instructoresInvitados.length >= 1"
+                        clearable
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">person_search</span>
+                        </template>
+                      </q-input>
+                    </div>
+                    <div class="col-12 col-md-2">
+                      <q-btn
+                        class="bg-blue-9 text-white full-height btn-press"
+                        label="Buscar"
+                        @click="buscarInstructorInvitado"
+                        :loading="loadingInstructoresInvitados"
+                        :disable="agendamiento.instructoresInvitados.length >= 1"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Resultados -->
+                  <div v-if="instructoresInvitadosResultados.length > 0" class="q-mt-sm">
+                    <q-card flat bordered class="bg-blue-1">
+                      <q-list separator>
+                        <q-item
+                          v-for="(instructor, idx) in instructoresInvitadosResultados"
+                          :key="idx"
+                          clickable
+                          @click="agregarInstructorInvitado(instructor)"
+                          class="q-pa-sm"
+                        >
+                          <q-item-section avatar>
+                            <q-icon name="person" color="blue-9" />
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label class="text-weight-bold">{{ instructor.name }}</q-item-label>
+                            <q-item-label caption>{{ instructor.tpdocument || 'CC' }}: {{ instructor.numdocument }}</q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <q-icon name="add_circle" color="blue-9" size="28px" />
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-card>
+                  </div>
+                </div>
+
+                <!-- Bienestar al Aprendiz -->
+                <div class="col-12">
+                  <div class="text-subtitle2 text-weight-bold text-blue-9 q-mb-sm">Bienestar al Aprendiz *</div>
+
+                  <!-- Bienestar seleccionado -->
+                  <div v-if="agendamiento.bienestar" class="q-mb-sm">
+                    <q-chip
+                      removable
+                      @remove="agendamiento.bienestar = null"
+                      class="bg-blue-1 text-blue-9"
+                    >
+                      <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">person</span>
+                      {{ agendamiento.bienestar.name }}
+                    </q-chip>
+                  </div>
+
+                  <!-- Buscador -->
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12 col-md-10">
+                      <q-input
+                        filled
+                        v-model="busquedaBienestar"
+                        label="Buscar instructor de bienestar..."
+                        @keyup.enter="buscarBienestar"
+                        :loading="loadingBienestar"
+                        clearable
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">school</span>
+                        </template>
+                      </q-input>
+                    </div>
+                    <div class="col-12 col-md-2">
+                      <q-btn
+                        class="bg-blue-9 text-white full-height btn-press"
+                        label="Buscar"
+                        @click="buscarBienestar"
+                        :loading="loadingBienestar"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Resultados -->
+                  <div v-if="bienestarResultados.length > 0" class="q-mt-sm">
+                    <q-card flat bordered class="bg-blue-1">
+                      <q-list separator>
+                        <q-item
+                          v-for="(instructor, idx) in bienestarResultados"
+                          :key="idx"
+                          clickable
+                          @click="seleccionarBienestar(instructor)"
+                          class="q-pa-sm"
+                        >
+                          <q-item-section avatar>
+                            <q-icon name="school" color="blue-9" />
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label class="text-weight-bold">{{ instructor.name }}</q-item-label>
+                            <q-item-label caption>{{ instructor.knowledge }}</q-item-label>
+                          </q-item-section>
+                          <q-item-section side>
+                            <q-icon name="add_circle" color="blue-9" size="28px" />
+                          </q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-card>
+                  </div>
+                </div>
+              </div>
+            </q-step>
+
+            <!-- PASO 2: Roles y Participantes Adicionales -->
+            <q-step
+              :name="2"
+              title="Roles y Participantes"
+              icon="groups"
+            >
+              <div class="row q-col-gutter-md q-mt-md">
+                <!-- Vocero -->
+                <div class="col-12">
+                  <div class="text-subtitle2 text-weight-bold text-blue-9 q-mb-sm">Vocero</div>
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12 col-md-6">
+                      <q-input
+                        filled
+                        v-model="agendamiento.vocero"
+                        label="Nombre completo"
+                        placeholder="Ej: Juan Pérez"
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">record_voice_over</span>
+                        </template>
+                      </q-input>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <q-input
+                        filled
+                        v-model="agendamiento.voceroCorreo"
+                        label="Correo electrónico"
+                        type="email"
+                        placeholder="Ej: juan.perez@sena.edu.co"
+                        :rules="[val => !val || val.includes('@') || 'El correo debe contener @']"
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">email</span>
+                        </template>
+                      </q-input>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Representante -->
+                <div class="col-12">
+                  <div class="text-subtitle2 text-weight-bold text-blue-9 q-mb-sm">Representante</div>
+                  <div class="row q-col-gutter-sm">
+                    <div class="col-12 col-md-6">
+                      <q-input
+                        filled
+                        v-model="agendamiento.representante"
+                        label="Nombre completo"
+                        placeholder="Ej: María González"
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">supervisor_account</span>
+                        </template>
+                      </q-input>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <q-input
+                        filled
+                        v-model="agendamiento.representanteCorreo"
+                        label="Correo electrónico"
+                        type="email"
+                        placeholder="Ej: maria.gonzalez@sena.edu.co"
+                      >
+                        <template v-slot:prepend>
+                          <span class="material-symbols-outlined">email</span>
+                        </template>
+                      </q-input>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Participantes Adicionales -->
+                <div class="col-12">
+                  <div class="text-subtitle2 text-weight-bold text-blue-9 q-mb-sm">Participantes Adicionales</div>
+
+                  <div v-if="agendamiento.participantesAdicionales.length === 0" class="q-mb-md text-grey-6 text-caption">
+                    No hay participantes adicionales agregados
+                  </div>
+
+                  <div v-for="(participante, idx) in agendamiento.participantesAdicionales" :key="idx" class="q-mb-md">
+                    <div class="bg-blue-1 q-pa-md rounded-borders">
+                      <div class="text-subtitle2 text-blue-9 q-mb-sm">Participante {{ idx + 1 }}</div>
+                      <div class="row q-col-gutter-sm">
+                        <div class="col-12 col-md-5">
+                          <q-input
+                            filled
+                            v-model="participante.nombre"
+                            label="Nombre completo"
+                            placeholder="Nombre del participante"
+                            dense
+                          />
+                        </div>
+                        <div class="col-12 col-md-5">
+                          <q-input
+                            filled
+                            v-model="participante.correo"
+                            label="Correo electrónico"
+                            type="email"
+                            placeholder="correo@ejemplo.com"
+                            dense
+                            :rules="[val => !val || val.includes('@') || 'El correo debe contener @']"
+                          />
+                        </div>
+                        <div class="col-12 col-md-2 flex items-center justify-end">
+                          <q-btn
+                            round
+                            color="red"
+                            icon="delete"
+                            size="sm"
+                            @click="eliminarParticipanteAdicional(idx)"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <q-btn
+                    flat
+                    color="blue-9"
+                    icon="add_circle"
+                    label="Agregar participante adicional"
+                    @click="agregarParticipanteAdicional"
+                    class="q-mt-sm"
+                  />
+                </div>
+              </div>
+            </q-step>
+          </q-stepper>
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancelar" class="btn-press" @click="cerrarDialogModificar" />
           <q-btn
-            unelevated
+            v-if="pasoAgendar === 1"
+            flat
             color="blue-9"
-            label="Guardar cambios"
-            @click="guardarModificacion"
-            :loading="guardando"
+            label="Siguiente"
+            @click="validarPaso1"
             class="btn-press"
           />
+          <template v-else>
+            <q-btn
+              flat
+              color="grey-7"
+              label="Atrás"
+              @click="pasoAgendar = 1"
+              class="btn-press q-mr-sm"
+            />
+            <q-btn
+              unelevated
+              color="blue-9"
+              label="Guardar cambios"
+              @click="guardarModificacion"
+              :loading="guardando"
+              class="btn-press"
+            />
+          </template>
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -679,12 +1360,40 @@ const dialogAgendar = ref(false);
 const dialogModificar = ref(false);
 const dialogDetalles = ref(false);
 
-// Formulario de agendamiento
+// Formulario de agendamiento extendido
 const agendamiento = ref({
   fecha: "",
   hora: "",
-  lugar: ""
+  lugar: "",
+  coordinador: null,
+  instructoresInvitados: [],
+  bienestar: null,
+  novedades: null,
+  vocero: "",
+  voceroCorreo: "",
+  representante: "",
+  representanteCorreo: "",
+  participantesAdicionales: [] // Ahora será un array de objetos { nombre, correo }
 });
+
+// Datos para selects y búsquedas
+const coordinadores = ref([]);
+const usuarios = ref([]);
+const instructores = ref([]);
+const instructoresBienestar = ref([]);
+const usuariosNovedades = ref([]);
+
+// Búsquedas
+const busquedaInstructorInvitado = ref("");
+const instructoresInvitadosResultados = ref([]);
+const loadingInstructoresInvitados = ref(false);
+
+const busquedaBienestar = ref("");
+const bienestarResultados = ref([]);
+const loadingBienestar = ref(false);
+
+// Stepper
+const pasoAgendar = ref(1);
 
 // Fecha mínima para agendar (hoy)
 const fechaMinima = computed(() => {
@@ -800,39 +1509,148 @@ function verDetalles(comite) {
 
 function agendarReunion(comite) {
   comiteSeleccionado.value = comite;
+  // Cargar datos existentes si están disponibles
+  const participantes = comite.meetingAdditionalParticipants || [];
+  // Si los participantes son strings simples, convertirlos a objetos
+  const participantesConCorreo = participantes.map(p =>
+    typeof p === 'string' ? { nombre: p, correo: '' } : p
+  );
+
   agendamiento.value = {
     fecha: comite.meetingDate ? new Date(comite.meetingDate).toISOString().split('T')[0] : "",
     hora: comite.meetingTime || "",
-    lugar: comite.meetingLocation || ""
+    lugar: comite.meetingLocation || "",
+    coordinador: comite.meetingCoordinador || null,
+    instructoresInvitados: comite.meetingInvitedInstructors || [],
+    bienestar: comite.meetingBienestar || null,
+    novedades: comite.meetingNovedades || null,
+    vocero: comite.meetingVocero || "",
+    voceroCorreo: comite.meetingVoceroCorreo || "",
+    representante: comite.meetingRepresentante || "",
+    representanteCorreo: comite.meetingRepresentanteCorreo || "",
+    participantesAdicionales: participantesConCorreo
   };
+  pasoAgendar.value = 1;
   dialogAgendar.value = true;
 }
 
 function modificarAgendamiento(comite) {
-  comiteSeleccionado.value = comite;
-  agendamiento.value = {
-    fecha: comite.meetingDate ? new Date(comite.meetingDate).toISOString().split('T')[0] : "",
-    hora: comite.meetingTime || "",
-    lugar: comite.meetingLocation || ""
-  };
-  dialogModificar.value = true;
+  // Hacer petición para obtener los detalles completos del comité
+  obtenerDetallesComiteParaEditar(comite, dialogModificar);
+}
+
+async function obtenerDetallesComiteParaEditar(comite, dialogRef) {
+  try {
+    const res = await get(`/comites/${comite._id}`);
+    const comiteCompleto = res || comite; // Usar el resultado o fallback al original
+
+    comiteSeleccionado.value = comiteCompleto;
+    const participantes = comiteCompleto.meetingAdditionalParticipants || [];
+    const participantesConCorreo = participantes.map(p =>
+      typeof p === 'string' ? { nombre: p, correo: '' } : p
+    );
+
+    agendamiento.value = {
+      fecha: comiteCompleto.meetingDate ? new Date(comiteCompleto.meetingDate).toISOString().split('T')[0] : "",
+      hora: comiteCompleto.meetingTime || "",
+      lugar: comiteCompleto.meetingLocation || "",
+      coordinador: comiteCompleto.meetingCoordinador || null,
+      instructoresInvitados: comiteCompleto.meetingInvitedInstructors || [],
+      bienestar: comiteCompleto.meetingBienestar || null,
+      novedades: comiteCompleto.meetingNovedades || null,
+      vocero: comiteCompleto.meetingVocero || "",
+      voceroCorreo: comiteCompleto.meetingVoceroCorreo || "",
+      representante: comiteCompleto.meetingRepresentante || "",
+      representanteCorreo: comiteCompleto.meetingRepresentanteCorreo || "",
+      participantesAdicionales: participantesConCorreo
+    };
+    pasoAgendar.value = 1;
+    dialogRef.value = true;
+  } catch (error) {
+    console.log("Error obteniendo detalles del comité:", error);
+    // Si falla, usar el comité original como fallback
+    comiteSeleccionado.value = comite;
+    const participantes = comite.meetingAdditionalParticipants || [];
+    const participantesConCorreo = participantes.map(p =>
+      typeof p === 'string' ? { nombre: p, correo: '' } : p
+    );
+
+    agendamiento.value = {
+      fecha: comite.meetingDate ? new Date(comite.meetingDate).toISOString().split('T')[0] : "",
+      hora: comite.meetingTime || "",
+      lugar: comite.meetingLocation || "",
+      coordinador: comite.meetingCoordinador || null,
+      instructoresInvitados: comite.meetingInvitedInstructors || [],
+      bienestar: comite.meetingBienestar || null,
+      novedades: comite.meetingNovedades || null,
+      vocero: comite.meetingVocero || "",
+      voceroCorreo: comite.meetingVoceroCorreo || "",
+      representante: comite.meetingRepresentante || "",
+      representanteCorreo: comite.meetingRepresentanteCorreo || "",
+      participantesAdicionales: participantesConCorreo
+    };
+    pasoAgendar.value = 1;
+    dialogRef.value = true;
+  }
 }
 
 function cerrarDialogAgendar() {
   dialogAgendar.value = false;
   comiteSeleccionado.value = null;
-  agendamiento.value = { fecha: "", hora: "", lugar: "" };
+  pasoAgendar.value = 1;
+  agendamiento.value = {
+    fecha: "",
+    hora: "",
+    lugar: "",
+    coordinador: null,
+    instructoresInvitados: [],
+    bienestar: null,
+    novedades: null,
+    vocero: "",
+    voceroCorreo: "",
+    representante: "",
+    representanteCorreo: "",
+    participantesAdicionales: []
+  };
+  busquedaInstructorInvitado.value = "";
+  instructoresInvitadosResultados.value = [];
+  busquedaBienestar.value = "";
+  bienestarResultados.value = [];
 }
 
 function cerrarDialogModificar() {
   dialogModificar.value = false;
   comiteSeleccionado.value = null;
-  agendamiento.value = { fecha: "", hora: "", lugar: "" };
+  pasoAgendar.value = 1;
+  agendamiento.value = {
+    fecha: "",
+    hora: "",
+    lugar: "",
+    coordinador: null,
+    instructoresInvitados: [],
+    bienestar: null,
+    novedades: null,
+    vocero: "",
+    voceroCorreo: "",
+    representante: "",
+    representanteCorreo: "",
+    participantesAdicionales: []
+  };
+  busquedaInstructorInvitado.value = "";
+  instructoresInvitadosResultados.value = [];
+  busquedaBienestar.value = "";
+  bienestarResultados.value = [];
 }
 
 async function guardarAgendamiento() {
-  if (!agendamiento.value.fecha || !agendamiento.value.hora || !agendamiento.value.lugar) {
-    $q.notify({ message: "Completa todos los campos", color: "orange", position: "top" });
+  // Validar campos del paso 2 antes de guardar
+  if (!validarPaso2()) {
+    return;
+  }
+
+  // Validar que el comité seleccionado exista
+  if (!comiteSeleccionado.value) {
+    $q.notify({ message: "No hay comité seleccionado", color: "red", position: "top" });
     return;
   }
 
@@ -842,11 +1660,21 @@ async function guardarAgendamiento() {
       meetingDate: agendamiento.value.fecha,
       meetingTime: agendamiento.value.hora,
       meetingLocation: agendamiento.value.lugar,
+      meetingCoordinador: agendamiento.value.coordinador,
+      meetingInvitedInstructors: agendamiento.value.instructoresInvitados.map(i => i._id || i),
+      meetingBienestar: agendamiento.value.bienestar?._id || agendamiento.value.bienestar,
+      meetingNovedades: agendamiento.value.novedades._id || agendamiento.value.novedades,
+      meetingVocero: agendamiento.value.vocero,
+      meetingVoceroCorreo: agendamiento.value.voceroCorreo,
+      meetingRepresentante: agendamiento.value.representante,
+      meetingRepresentanteCorreo: agendamiento.value.representanteCorreo,
+      meetingAdditionalParticipants: agendamiento.value.participantesAdicionales,
       status: 'SCHEDULED'
     });
 
     $q.notify({ message: "Reunión agendada correctamente", color: "green-9", position: "top" });
     dialogAgendar.value = false;
+    pasoAgendar.value = 1;
     await cargarComites();
   } catch (error) {
     console.log("Error agendando:", error);
@@ -857,8 +1685,14 @@ async function guardarAgendamiento() {
 }
 
 async function guardarModificacion() {
-  if (!agendamiento.value.fecha || !agendamiento.value.hora || !agendamiento.value.lugar) {
-    $q.notify({ message: "Completa todos los campos", color: "orange", position: "top" });
+  // Validar campos del paso 2 antes de guardar
+  if (!validarPaso2()) {
+    return;
+  }
+
+  // Validar que el comité seleccionado exista
+  if (!comiteSeleccionado.value) {
+    $q.notify({ message: "No hay comité seleccionado", color: "red", position: "top" });
     return;
   }
 
@@ -867,11 +1701,21 @@ async function guardarModificacion() {
     await put(`/comites/${comiteSeleccionado.value._id}`, {
       meetingDate: agendamiento.value.fecha,
       meetingTime: agendamiento.value.hora,
-      meetingLocation: agendamiento.value.lugar
+      meetingLocation: agendamiento.value.lugar,
+      meetingCoordinador: agendamiento.value.coordinador?._id || agendamiento.value.coordinador,
+      meetingInvitedInstructors: agendamiento.value.instructoresInvitados.map(i => i._id || i),
+      meetingBienestar: agendamiento.value.bienestar?._id || agendamiento.value.bienestar,
+      meetingNovedades: agendamiento.value.novedades?._id || agendamiento.value.novedades,
+      meetingVocero: agendamiento.value.vocero,
+      meetingVoceroCorreo: agendamiento.value.voceroCorreo,
+      meetingRepresentante: agendamiento.value.representante,
+      meetingRepresentanteCorreo: agendamiento.value.representanteCorreo,
+      meetingAdditionalParticipants: agendamiento.value.participantesAdicionales
     });
 
     $q.notify({ message: "Agendamiento modificado correctamente", color: "green-9", position: "top" });
     dialogModificar.value = false;
+    pasoAgendar.value = 1;
     await cargarComites();
   } catch (error) {
     console.log("Error modificando:", error);
@@ -992,8 +1836,226 @@ function getDecisionChipClass(decision) {
   return classes[decision] || "bg-grey-2";
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// FUNCIONES PARA CARGAR DATOS DE SELECTS Y BÚSQUEDAS
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function cargarDatosIniciales() {
+  try {
+    // Cargar coordinadores
+    const resCoordinadores = await get("/users/onlycoordinator");
+    coordinadores.value = Array.isArray(resCoordinadores) ? resCoordinadores : (resCoordinadores?.data || []);
+
+    // Cargar todos los usuarios (para filtrar novedades)
+    const resUsuarios = await get("/users");
+    const allUsers = Array.isArray(resUsuarios) ? resUsuarios : (resUsuarios?.data || []);
+    usuariosNovedades.value = allUsers.filter(u => u.role === 'NOVEDADES');
+
+    // Cargar todos los instructores (para filtrar por knowledge)
+    const resInstructores = await get("/instructors");
+    const allInstructors = Array.isArray(resInstructores) ? resInstructores : (resInstructores?.data || []);
+    instructores.value = allInstructors;
+    instructoresBienestar.value = allInstructors.filter(i => i.knowledge === 'INSTITUCIONAL DE PEDAGOGÍA');
+  } catch (error) {
+    console.log("Error cargando datos iniciales:", error);
+  }
+}
+
+// Búsqueda de instructores invitados
+async function buscarInstructorInvitado() {
+  const query = busquedaInstructorInvitado.value?.trim();
+  if (!query) {
+    instructoresInvitadosResultados.value = [];
+    return;
+  }
+
+  try {
+    loadingInstructoresInvitados.value = true;
+    const allInstructors = instructores.value.filter(i => i.status === 0);
+    const queryLower = query.toLowerCase();
+    const creadorId = comiteSeleccionado.value?.createdBy?._id;
+
+    instructoresInvitadosResultados.value = allInstructors.filter(i =>
+      (i.name?.toLowerCase().includes(queryLower) ||
+      i.numdocument?.includes(queryLower)) &&
+      !agendamiento.value.instructoresInvitados.some(agregado => agregado._id === i._id) &&
+      i._id !== creadorId // Excluir al instructor que creó el comité
+    );
+
+    // Mostrar aviso si no se encontraron resultados
+    if (instructoresInvitadosResultados.value.length === 0) {
+      $q.notify({
+        message: "No se encontraron instructores con ese criterio de búsqueda",
+        color: "orange",
+        position: "top",
+        timeout: 3000
+      });
+    }
+  } catch (error) {
+    console.log("Error buscando instructores:", error);
+    instructoresInvitadosResultados.value = [];
+  } finally {
+    loadingInstructoresInvitados.value = false;
+  }
+}
+
+function agregarInstructorInvitado(instructor) {
+  // Validar que solo haya 1 instructor invitado
+  if (agendamiento.value.instructoresInvitados.length >= 1) {
+    $q.notify({
+      message: "Solo puedes agregar 1 instructor invitado",
+      color: "orange",
+      position: "top"
+    });
+    return;
+  }
+
+  agendamiento.value.instructoresInvitados.push(instructor);
+  busquedaInstructorInvitado.value = "";
+  instructoresInvitadosResultados.value = [];
+}
+
+function eliminarInstructorInvitado(id) {
+  agendamiento.value.instructoresInvitados = agendamiento.value.instructoresInvitados.filter(i => i._id !== id);
+}
+
+// Validar campos del paso 1 antes de avanzar
+function validarPaso1() {
+  // Campos obligatorios del paso 1
+  const camposObligatorios = {
+    fecha: "Fecha de reunión",
+    hora: "Hora",
+    lugar: "Lugar de reunión",
+    coordinador: "Coordinador",
+    novedades: "Novedades",
+    bienestar: "Bienestar al Aprendiz"
+  };
+
+  const camposVacios = [];
+
+  if (!agendamiento.value.fecha) camposVacios.push(camposObligatorios.fecha);
+  if (!agendamiento.value.hora) camposVacios.push(camposObligatorios.hora);
+  if (!agendamiento.value.lugar) camposVacios.push(camposObligatorios.lugar);
+  if (!agendamiento.value.coordinador) camposVacios.push(camposObligatorios.coordinador);
+  if (!agendamiento.value.novedades) camposVacios.push(camposObligatorios.novedades);
+  if (!agendamiento.value.bienestar) camposVacios.push(camposObligatorios.bienestar);
+
+  if (camposVacios.length > 0) {
+    $q.notify({
+      message: `Por favor completa los campos obligatorios: ${camposVacios.join(", ")}`,
+      color: "orange",
+      position: "top",
+      timeout: 3000
+    });
+    return;
+  }
+
+  // Si todos los campos están completos, avanzar al paso 2
+  pasoAgendar.value = 2;
+}
+
+// Validar campos del paso 2 antes de guardar
+function validarPaso2() {
+  // Campos obligatorios del paso 2
+  const camposObligatorios = {
+    vocero: "Nombre del Vocero",
+    voceroCorreo: "Correo del Vocero",
+    representante: "Nombre del Representante",
+    representanteCorreo: "Correo del Representante"
+  };
+
+  const camposVacios = [];
+
+  if (!agendamiento.value.vocero) camposVacios.push(camposObligatorios.vocero);
+  if (!agendamiento.value.voceroCorreo) camposVacios.push(camposObligatorios.voceroCorreo);
+  if (!agendamiento.value.representante) camposVacios.push(camposObligatorios.representante);
+  if (!agendamiento.value.representanteCorreo) camposVacios.push(camposObligatorios.representanteCorreo);
+
+  if (camposVacios.length > 0) {
+    $q.notify({
+      message: `Por favor completa los campos obligatorios: ${camposVacios.join(", ")}`,
+      color: "orange",
+      position: "top",
+      timeout: 3000
+    });
+    return false;
+  }
+
+  // Validar correos tengan @
+  if (!agendamiento.value.voceroCorreo.includes('@')) {
+    $q.notify({
+      message: "El correo del vocero debe contener @",
+      color: "orange",
+      position: "top"
+    });
+    return false;
+  }
+
+  if (!agendamiento.value.representanteCorreo.includes('@')) {
+    $q.notify({
+      message: "El correo del representante debe contener @",
+      color: "orange",
+      position: "top"
+    });
+    return false;
+  }
+
+  return true;
+}
+
+// Búsqueda de bienestar
+async function buscarBienestar() {
+  const query = busquedaBienestar.value?.trim();
+  if (!query) {
+    bienestarResultados.value = [];
+    return;
+  }
+
+  try {
+    loadingBienestar.value = true;
+    const queryLower = query.toLowerCase();
+
+    bienestarResultados.value = instructoresBienestar.value.filter(i =>
+      (i.name?.toLowerCase().includes(queryLower) ||
+      i.numdocument?.includes(queryLower)) &&
+      agendamiento.value.bienestar?._id !== i._id
+    );
+
+    // Mostrar aviso si no se encontraron resultados
+    if (bienestarResultados.value.length === 0) {
+      $q.notify({
+        message: "No se encontraron instructores de bienestar con ese criterio de búsqueda",
+        color: "orange",
+        position: "top",
+        timeout: 3000
+      });
+    }
+  } catch (error) {
+    console.log("Error buscando bienestar:", error);
+    bienestarResultados.value = [];
+  } finally {
+    loadingBienestar.value = false;
+  }
+}
+
+function seleccionarBienestar(instructor) {
+  agendamiento.value.bienestar = instructor;
+  busquedaBienestar.value = "";
+  bienestarResultados.value = [];
+}
+
+// Agregar participante adicional
+function agregarParticipanteAdicional() {
+  agendamiento.value.participantesAdicionales.push({ nombre: "", correo: "" });
+}
+
+function eliminarParticipanteAdicional(index) {
+  agendamiento.value.participantesAdicionales.splice(index, 1);
+}
+
 onMounted(() => {
   cargarComites();
+  cargarDatosIniciales();
 });
 </script>
 
@@ -1131,7 +2193,7 @@ onMounted(() => {
   color: white;
   padding: 4px 12px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .ficha-pendiente {

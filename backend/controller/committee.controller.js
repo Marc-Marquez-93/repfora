@@ -19,6 +19,10 @@ committeeCtrl.getCommittees = async (req, res) => {
       .populate("invitedInstructors")
       .populate("wellnessRepresentative")
       .populate("newsRepresentative")
+      .populate("meetingCoordinador")
+      .populate("meetingInvitedInstructors")
+      .populate("meetingBienestar")
+      .populate("meetingNovedades")
       .sort({ createdAt: -1 });
 
     res.json(committees);
@@ -43,7 +47,11 @@ committeeCtrl.getCommitteeById = async (req, res) => {
       .populate("coordinator")
       .populate("invitedInstructors")
       .populate("wellnessRepresentative")
-      .populate("newsRepresentative");
+      .populate("newsRepresentative")
+      .populate("meetingCoordinador")
+      .populate("meetingInvitedInstructors")
+      .populate("meetingBienestar")
+      .populate("meetingNovedades");
 
     if (!committee) {
       return res.status(404).json({ msg: "Comité no encontrado" });
@@ -146,6 +154,15 @@ committeeCtrl.updateCommittee = async (req, res) => {
     meetingLocation,
     status,
     learners,
+    meetingCoordinador,
+    meetingInvitedInstructors,
+    meetingBienestar,
+    meetingNovedades,
+    meetingVocero,
+    meetingVoceroCorreo,
+    meetingRepresentante,
+    meetingRepresentanteCorreo,
+    meetingAdditionalParticipants,
   } = req.body;
 
   try {
@@ -154,11 +171,22 @@ committeeCtrl.updateCommittee = async (req, res) => {
       return res.status(404).json({ msg: "Comité no encontrado" });
     }
 
-    // Actualizar campos
+    // Actualizar campos básicos
     if (meetingDate) committee.meetingDate = new Date(meetingDate);
     if (meetingTime) committee.meetingTime = meetingTime;
     if (meetingLocation) committee.meetingLocation = meetingLocation;
     if (status) committee.status = status;
+
+    // Actualizar campos de agendamiento
+    if (meetingCoordinador) committee.meetingCoordinador = meetingCoordinador;
+    if (meetingInvitedInstructors) committee.meetingInvitedInstructors = meetingInvitedInstructors;
+    if (meetingBienestar) committee.meetingBienestar = meetingBienestar;
+    if (meetingNovedades) committee.meetingNovedades = meetingNovedades;
+    if (meetingVocero !== undefined) committee.meetingVocero = meetingVocero;
+    if (meetingVoceroCorreo !== undefined) committee.meetingVoceroCorreo = meetingVoceroCorreo;
+    if (meetingRepresentante !== undefined) committee.meetingRepresentante = meetingRepresentante;
+    if (meetingRepresentanteCorreo !== undefined) committee.meetingRepresentanteCorreo = meetingRepresentanteCorreo;
+    if (meetingAdditionalParticipants) committee.meetingAdditionalParticipants = meetingAdditionalParticipants;
 
     // Actualizar learners si se proporcionan
     if (learners && Array.isArray(learners)) {
@@ -238,6 +266,14 @@ committeeCtrl.getCommitteesByFiche = async (req, res) => {
       })
       .populate("requestingInstructors")
       .populate("createdBy")
+      .populate("coordinator")
+      .populate("invitedInstructors")
+      .populate("wellnessRepresentative")
+      .populate("newsRepresentative")
+      .populate("meetingCoordinador")
+      .populate("meetingInvitedInstructors")
+      .populate("meetingBienestar")
+      .populate("meetingNovedades")
       .sort({ createdAt: -1 });
 
     res.json(committees);
@@ -257,6 +293,14 @@ committeeCtrl.getPendingCommittees = async (req, res) => {
       })
       .populate("requestingInstructors")
       .populate("createdBy")
+      .populate("coordinator")
+      .populate("invitedInstructors")
+      .populate("wellnessRepresentative")
+      .populate("newsRepresentative")
+      .populate("meetingCoordinador")
+      .populate("meetingInvitedInstructors")
+      .populate("meetingBienestar")
+      .populate("meetingNovedades")
       .sort({ createdAt: -1 });
 
     res.json(committees);
@@ -276,6 +320,14 @@ committeeCtrl.getScheduledCommittees = async (req, res) => {
       })
       .populate("requestingInstructors")
       .populate("createdBy")
+      .populate("coordinator")
+      .populate("invitedInstructors")
+      .populate("wellnessRepresentative")
+      .populate("newsRepresentative")
+      .populate("meetingCoordinador")
+      .populate("meetingInvitedInstructors")
+      .populate("meetingBienestar")
+      .populate("meetingNovedades")
       .sort({ meetingDate: 1 });
 
     res.json(committees);

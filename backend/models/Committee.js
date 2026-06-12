@@ -200,6 +200,44 @@ const CommitteeSchema = new Schema(
       type: String
     },
 
+    // --- DATOS ESPECÍFICOS DE LA REUNIÓN AGENDADA ---
+    meetingCoordinador: {
+      type: Schema.Types.ObjectId,
+      ref: "User"
+    }, // Coordinador de la reunión agendada
+    meetingInvitedInstructors: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Instructor"
+      }
+    ], // Instructores invitados a la reunión
+    meetingBienestar: {
+      type: Schema.Types.ObjectId,
+      ref: "Instructor"
+    }, // Bienestar asignado a la reunión
+    meetingNovedades: {
+      type: Schema.Types.ObjectId,
+      ref: "User"
+    }, // Novedades asignado a la reunión
+    meetingVocero: {
+      type: String
+    }, // Nombre del vocero para la reunión
+    meetingVoceroCorreo: {
+      type: String
+    }, // Correo del vocero
+    meetingRepresentante: {
+      type: String
+    }, // Nombre del representante para la reunión
+    meetingRepresentanteCorreo: {
+      type: String
+    }, // Correo del representante
+    meetingAdditionalParticipants: [
+      {
+        nombre: { type: String },
+        correo: { type: String }
+      }
+    ], // Participantes adicionales para la reunión
+
     // --- HISTORIAL Y CIERRE ---
     faultSeverity: {
       type: String,
