@@ -37,6 +37,8 @@ let typesNews = [
   "APLAZAMIENTO",
   "DESERCIÓN",
   "PLAN DE MEJORAMIENTO",
+  "CONDICIONADO",
+  "CANCELADO",
 ];
 
 let workingsDays = ["MAÑANA", "TARDE", "NOCHE"];
