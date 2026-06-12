@@ -310,8 +310,8 @@ routerNew.post("/registerimprovement", validateImprovement, registerImprovement)
  *             properties:
  *               tpnew:
  *                 type: string
- *                 description: Tipo de novedad (TRASLADO, RETIRO VOLUNTARIO, REINGRESO, REINGRESO ESPECIAL, APLAZAMIENTO, DESERCIÓN)
- *                 enum: ["TRASLADO", "RETIRO VOLUNTARIO", "REINGRESO", "REINGRESO ESPECIAL", "APLAZAMIENTO", "DESERCIÓN"]
+ *                 description: Tipo de novedad (TRASLADO, RETIRO VOLUNTARIO, REINGRESO, REINGRESO ESPECIAL, APLAZAMIENTO, DESERCIÓN, CONDICIONADO, CANCELADO)
+ *                 enum: ["TRASLADO", "RETIRO VOLUNTARIO", "REINGRESO", "REINGRESO ESPECIAL", "APLAZAMIENTO", "DESERCIÓN", "CONDICIONADO", "CANCELADO"]
  *               tpdocument:
  *                 type: string
  *                 description: Tipo de documento (CC, TI, CE, PASAPORTE)
