@@ -84,7 +84,7 @@ Para cada registro de aprendiz en ambas tablas se debe proveer:
 ## 📋 Fase 3: Integraciones de Backend y Generación de Documentos (A Futuro)
 
 ### Paso 3.1: Generación de PDFs con jsPDF
-Utilizando la librería `jsPDF` (https://github.com/parallax/jsPDF.git), se deben generar dos tipos de documentos institucionales. Ambos deben incluir el logotipo del SENA ubicado en [logoComites.png](file:///c:/Users/USUARIO/Downloads/una/repfora/backend/public/images/logoComites.png) y tener un formato formal/institucional:
+Utilizando la librería `jsPDF` (https://github.com/parallax/jsPDF.git), se deben generar dos tipos de documentos institucionales. Ambos deben incluir el logotipo del SENA ubicado en [logoComites.png](backend/public/images/logoComites.png) y tener un formato formal/institucional:
 - [ ] **Documento de Orden del Día (Al Agendar Comité)**:
   - Generado automáticamente al guardar/agendar el comité.
   - Contenido: Fecha del comité, Lugar, Objeto de la sesión (Analizar el caso de los aprendices citados), listado de Aprendices Citados a Descargos, programa de formación, ficha, temas del orden del día (Saludo, Quórum, Hechos, etc.), Quórum de asistencia (Coordinador Académico, Instructores, Bienestar, Apoyo a Novedades, Vocero, Representante, etc.).
