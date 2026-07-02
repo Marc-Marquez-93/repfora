@@ -26,14 +26,6 @@
  * @property {LearnerDetail[]} learners - Aprendices involucrados
  * @property {Evidence[]} evidence - Evidencias adjuntas
  * @property {Schema.Types.ObjectId[]} requestingInstructors - Instructores solicitantes
- * @property {Schema.Types.ObjectId} coordinator - Coordinador académico
- * @property {Schema.Types.ObjectId[]} invitedInstructors - Instructores invitados
- * @property {Schema.Types.ObjectId} wellnessRepresentative - Representante de bienestar
- * @property {Schema.Types.ObjectId} newsRepresentative - Profesional de novedades
- * @property {string} spokesperson - Vocero
- * @property {string} representative - Representante estudiantil
- * @property {string[]} additionalAssistants - Asistentes adicionales
- * @property {string[]} participantEmails - Correos para notificaciones
  * @property {Date} meetingDate - Fecha de reunión
  * @property {string} meetingLocation - Lugar de reunión
  * @property {string} faultSeverity - Gravedad de la falta (LIGHT, SERIOUS, VERY_SERIOUS, PENDING)
@@ -151,43 +143,6 @@ const CommitteeSchema = new Schema(
       required: true
     }, // Instructor que creó/solicitó el comité (el que está logueado)
 
-    // --- INTEGRANTES LOGÍSTICOS ---
-    coordinator: {
-      type: Schema.Types.ObjectId,
-      ref: "User"
-    }, // Coordinador académico
-    invitedInstructors: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Instructor"
-      }
-    ], // Instructores adicionales citados
-    wellnessRepresentative: {
-      type: Schema.Types.ObjectId,
-      ref: "Instructor"
-    }, // Representante de Bienestar
-    newsRepresentative: {
-      type: Schema.Types.ObjectId,
-      ref: "User"
-    }, // Profesional de Novedades
-
-    // --- ASISTENTES LIBRES Y COMUNICACIÓN ---
-    spokesperson: {
-      type: String
-    }, // Vocero
-    representative: {
-      type: String
-    }, // Representante estudiantil
-    additionalAssistants: [
-      {
-        type: String
-      }
-    ], // Otros asistentes libres
-    participantEmails: [
-      {
-        type: String
-      }
-    ], // Correos electrónicos para notificaciones masivas
 
     // --- DATOS DE AGENDAMIENTO ---
     meetingDate: {
