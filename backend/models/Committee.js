@@ -252,6 +252,37 @@ const CommitteeSchema = new Schema(
       type: String,
       enum: ["PENDING", "SCHEDULED", "COMPLETED", "CANCELLED"],
       default: "PENDING"
+    },
+
+    // --- SOLICITUD DE CANCELACIÓN ---
+    cancellationRequested: {
+      type: Boolean,
+      default: false
+    },
+    cancellationRequestedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "Instructor"
+    },
+    cancellationRequestedAt: {
+      type: Date
+    },
+    cancellationReason: {
+      type: String
+    },
+    cancellationStatus: {
+      type: String,
+      enum: ["PENDING", "APPROVED", "REJECTED"],
+      default: "PENDING"
+    },
+    cancellationDecisionBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User"
+    },
+    cancellationDecisionAt: {
+      type: Date
+    },
+    cancellationDecisionNote: {
+      type: String
     }
   },
   {

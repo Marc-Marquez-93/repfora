@@ -101,6 +101,11 @@
                 <div class="ficha-cell">
                   <span class="text-weight-bold text-green-9">{{ props.row.ficha }}</span>
                   <span class="q-ml-xs text-grey-7">- {{ props.row.nombrePrograma }}</span>
+                  <!-- Indicador de solicitud de cancelación -->
+                  <q-badge v-if="props.row.cancellationRequested && props.row.cancellationStatus === 'PENDING'"
+                    class="bg-orange text-white q-ml-xs"
+                    label="Solicita cancelación"
+                  />
                 </div>
               </q-td>
             </template>
@@ -170,17 +175,30 @@
                     <q-tooltip>Ver datos del comité</q-tooltip>
                   </q-btn>
 
-                  <!-- Cancelar (solo pendientes) -->
+                  <!-- Solicitar Cancelación (solo pendientes y sin solicitud previa) -->
                   <q-btn
-                    v-if="props.row.status === 'PENDING'"
+                    v-if="props.row.status === 'PENDING' && !props.row.cancellationRequested"
                     round
                     size="xs"
-                    color="red"
-                    icon="cancel"
+                    color="orange"
+                    icon="pending_actions"
                     class="action-btn btn-press"
-                    @click="cancelarComite(props.row)"
+                    @click="solicitarCancelacion(props.row)"
                   >
-                    <q-tooltip>Cancelar comité</q-tooltip>
+                    <q-tooltip>Solicitar cancelación</q-tooltip>
+                  </q-btn>
+
+                  <!-- Indicador de solicitud pendiente (solo lectura) -->
+                  <q-btn
+                    v-if="props.row.cancellationRequested && props.row.cancellationStatus === 'PENDING'"
+                    round
+                    size="xs"
+                    color="grey"
+                    icon="schedule"
+                    class="action-btn"
+                    disable
+                  >
+                    <q-tooltip>Solicitud de cancelación pendiente de aprobación</q-tooltip>
                   </q-btn>
                 </div>
               </q-td>
@@ -204,6 +222,11 @@
                     <div class="ficha-cell">
                       <span class="text-weight-bold text-green-9">{{ props.row.ficha }}</span>
                       <span class="q-ml-xs text-grey-7">- {{ props.row.nombrePrograma }}</span>
+                      <!-- Indicador de solicitud de cancelación -->
+                      <q-badge v-if="props.row.cancellationRequested && props.row.cancellationStatus === 'PENDING'"
+                        class="bg-orange text-white q-ml-xs"
+                        label="Solicita cancelación"
+                      />
                     </div>
                   </template>
                   <template v-else-if="col.name === 'fechaCreacion'">
@@ -252,15 +275,27 @@
                         <q-tooltip>Ver datos del comité</q-tooltip>
                       </q-btn>
                       <q-btn
-                        v-if="props.row.status === 'PENDING'"
+                        v-if="props.row.status === 'PENDING' && !props.row.cancellationRequested"
                         round
                         size="xs"
-                        color="red"
-                        icon="cancel"
+                        color="orange"
+                        icon="pending_actions"
                         class="action-btn btn-press"
-                        @click="cancelarComite(props.row)"
+                        @click="solicitarCancelacion(props.row)"
                       >
-                        <q-tooltip>Cancelar comité</q-tooltip>
+                        <q-tooltip>Solicitar cancelación</q-tooltip>
+                      </q-btn>
+
+                      <q-btn
+                        v-if="props.row.cancellationRequested && props.row.cancellationStatus === 'PENDING'"
+                        round
+                        size="xs"
+                        color="grey"
+                        icon="schedule"
+                        class="action-btn"
+                        disable
+                      >
+                        <q-tooltip>Solicitud de cancelación pendiente de aprobación</q-tooltip>
                       </q-btn>
                     </div>
                   </template>
@@ -632,7 +667,12 @@
                             v-model="nuevoAprendiz.documentNumber"
                             label="Número de Documento *"
                             lazy-rules
-                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                            :rules="[
+                              (val) => (val && val.trim().length > 0) || 'El campo es requerido',
+                              (val) => /^\d+$/.test(val) || 'Solo se permiten números',
+                              (val) => val.length >= 7 || 'Mínimo 7 dígitos'
+                            ]"
+                            @input="v => { if (v) nuevoAprendiz.documentNumber = v.replace(/\D/g, ''); }"
                           >
                             <template v-slot:prepend>
                               <span class="material-symbols-outlined">pin</span>
@@ -647,7 +687,12 @@
                             v-model="nuevoAprendiz.phone"
                             label="Teléfono *"
                             lazy-rules
-                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                            :rules="[
+                              (val) => (val && val.trim().length > 0) || 'El campo es requerido',
+                              (val) => /^\d+$/.test(val) || 'Solo se permiten números',
+                              (val) => val.length >= 7 || 'Mínimo 7 dígitos'
+                            ]"
+                            @input="v => { if (v) nuevoAprendiz.phone = v.replace(/\D/g, ''); }"
                           >
                             <template v-slot:prepend>
                               <span class="material-symbols-outlined">phone</span>
@@ -663,7 +708,12 @@
                             label="Nombre Completo *"
                             placeholder="Nombres y Apellidos"
                             lazy-rules
-                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
+                            :rules="[
+                              (val) => (val && val.trim().length > 0) || 'El campo es requerido',
+                              (val) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(val) || 'Solo se permiten letras y espacios',
+                              (val) => val.trim().split(' ').length >= 2 || 'Debe incluir nombre y apellido'
+                            ]"
+                            @input="v => { if (v) nuevoAprendiz.fullname = v.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''); }"
                           >
                             <template v-slot:prepend>
                               <span class="material-symbols-outlined">person</span>
@@ -770,7 +820,7 @@
                         </q-item-section>
                         <q-item-section side>
                           <q-badge
-                            v-if="aprendiz.noveltyType && aprendiz.description && aprendiz.manual && aprendiz.competencesText && aprendiz.outcomesText"
+                            v-if="aprendiz.noveltyType && aprendiz.description && aprendiz.manual && aprendiz.competences && aprendiz.competences.length > 0 && aprendiz.outcomes && aprendiz.outcomes.length > 0"
                             label="Completado"
                             color="green-9"
                           />
@@ -860,36 +910,174 @@
                           </q-input>
                         </div>
 
+                        <!-- Competencias Afectadas -->
                         <div class="col-12">
-                          <q-input
-                            filled
-                            type="textarea"
-                            v-model="aprendizActual.competencesText"
-                            label="Competencias Afectadas *"
-                            rows="2"
-                            lazy-rules
-                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                          >
-                            <template v-slot:prepend>
-                              <span class="material-symbols-outlined">school</span>
-                            </template>
-                          </q-input>
+                          <div class="text-subtitle2 text-weight-bold text-green-9 q-mb-sm">
+                            Competencias Afectadas *
+                          </div>
+
+                          <!-- Competencias agregadas -->
+                          <div v-if="aprendizActual.competences && aprendizActual.competences.length > 0" class="q-mb-sm">
+                            <div class="row q-gutter-xs" style="flex-wrap: wrap;">
+                              <q-chip
+                                v-for="(competence, idx) in aprendizActual.competences"
+                                :key="'comp-'+idx"
+                                removable
+                                @remove="eliminarCompetencia(competence._id)"
+                                class="bg-green-1 text-green-9"
+                              >
+                                <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">school</span>
+                                {{ competence.name }}
+                                <q-tooltip v-if="competence.number">{{ competence.number }}</q-tooltip>
+                              </q-chip>
+                            </div>
+                          </div>
+
+                          <!-- Buscador -->
+                          <div class="row q-col-gutter-sm q-mb-sm">
+                            <div class="col-12 col-md-10">
+                              <q-input
+                                filled
+                                v-model="busquedaCompetencia"
+                                label="Buscar competencias..."
+                                @keyup.enter="buscarCompetencia"
+                                :loading="loadingCompetencias"
+                                clearable
+                              >
+                                <template v-slot:prepend>
+                                  <span class="material-symbols-outlined">school</span>
+                                </template>
+                              </q-input>
+                            </div>
+                            <div class="col-12 col-md-2">
+                              <q-btn
+                                class="bg-green-9 text-white full-height btn-press"
+                                label="Buscar"
+                                @click="buscarCompetencia"
+                                :loading="loadingCompetencias"
+                              />
+                            </div>
+                          </div>
+
+                          <!-- Resultados -->
+                          <div v-if="competenciasResultados.length > 0" class="q-mt-sm">
+                            <q-card flat bordered class="bg-green-1">
+                              <q-card-section class="bg-green-2 q-pa-sm">
+                                <div class="text-caption text-green-9">Resultados encontrados (haz clic para agregar)</div>
+                              </q-card-section>
+                              <q-list separator>
+                                <q-item
+                                  v-for="(competencia, index) in competenciasResultados"
+                                  :key="competencia._id"
+                                  clickable
+                                  @click="agregarCompetencia(competencia)"
+                                  class="q-pa-sm result-item"
+                                  :style="{ animationDelay: `${index * 30}ms` }"
+                                >
+                                  <q-item-section avatar>
+                                    <q-icon name="school" color="green-9" />
+                                  </q-item-section>
+                                  <q-item-section>
+                                    <q-item-label class="text-weight-bold">{{ competencia.name }}</q-item-label>
+                                    <q-item-label caption>Número: {{ competencia.number }} | Programa: {{ competencia.program?.name || 'N/A' }}</q-item-label>
+                                  </q-item-section>
+                                  <q-item-section side>
+                                    <q-icon name="add_circle" color="green-9" size="28px" />
+                                  </q-item-section>
+                                </q-item>
+                              </q-list>
+                            </q-card>
+                          </div>
+
+                          <!-- Validación visual -->
+                          <div v-if="!aprendizActual.competences || aprendizActual.competences.length === 0" class="q-mt-sm text-caption text-red">
+                            Debes agregar al menos una competencia
+                          </div>
                         </div>
 
-                        <div class="col-12">
-                          <q-input
-                            filled
-                            type="textarea"
-                            v-model="aprendizActual.outcomesText"
-                            label="Resultados de Aprendizaje Afectados *"
-                            rows="2"
-                            lazy-rules
-                            :rules="[(val) => (val && val.trim().length > 0) || 'El campo es requerido']"
-                          >
-                            <template v-slot:prepend>
-                              <span class="material-symbols-outlined">emoji_objects</span>
-                            </template>
-                          </q-input>
+                        <!-- Resultados de Aprendizaje Afectados -->
+                        <div class="col-12 q-mt-md">
+                          <div class="text-subtitle2 text-weight-bold text-green-9 q-mb-sm">
+                            Resultados de Aprendizaje Afectados *
+                          </div>
+
+                          <!-- Resultados agregados -->
+                          <div v-if="aprendizActual.outcomes && aprendizActual.outcomes.length > 0" class="q-mb-sm">
+                            <div class="row q-gutter-xs" style="flex-wrap: wrap;">
+                              <q-chip
+                                v-for="(outcome, idx) in aprendizActual.outcomes"
+                                :key="'out-'+idx"
+                                removable
+                                @remove="eliminarResultado(outcome._id)"
+                                class="bg-blue-1 text-blue-9"
+                              >
+                                <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">emoji_objects</span>
+                                {{ outcome.code }}
+                                <q-tooltip>{{ outcome.outcomes }}</q-tooltip>
+                              </q-chip>
+                            </div>
+                          </div>
+
+                          <!-- Buscador -->
+                          <div class="row q-col-gutter-sm q-mb-sm">
+                            <div class="col-12 col-md-10">
+                              <q-input
+                                filled
+                                v-model="busquedaResultado"
+                                label="Buscar resultados de aprendizaje..."
+                                @keyup.enter="buscarResultado"
+                                :loading="loadingResultados"
+                                clearable
+                              >
+                                <template v-slot:prepend>
+                                  <span class="material-symbols-outlined">emoji_objects</span>
+                                </template>
+                              </q-input>
+                            </div>
+                            <div class="col-12 col-md-2">
+                              <q-btn
+                                class="bg-green-9 text-white full-height btn-press"
+                                label="Buscar"
+                                @click="buscarResultado"
+                                :loading="loadingResultados"
+                              />
+                            </div>
+                          </div>
+
+                          <!-- Resultados -->
+                          <div v-if="resultadosResultados.length > 0" class="q-mt-sm">
+                            <q-card flat bordered class="bg-blue-1">
+                              <q-card-section class="bg-blue-2 q-pa-sm">
+                                <div class="text-caption text-blue-9">Resultados encontrados (haz clic para agregar)</div>
+                              </q-card-section>
+                              <q-list separator>
+                                <q-item
+                                  v-for="(resultado, index) in resultadosResultados"
+                                  :key="resultado._id"
+                                  clickable
+                                  @click="agregarResultado(resultado)"
+                                  class="q-pa-sm result-item"
+                                  :style="{ animationDelay: `${index * 30}ms` }"
+                                >
+                                  <q-item-section avatar>
+                                    <q-icon name="emoji_objects" color="blue-9" />
+                                  </q-item-section>
+                                  <q-item-section>
+                                    <q-item-label class="text-weight-bold">{{ resultado.code }}</q-item-label>
+                                    <q-item-label caption>{{ resultado.outcomes?.substring(0, 80) }}{{ resultado.outcomes?.length > 80 ? '...' : '' }}</q-item-label>
+                                  </q-item-section>
+                                  <q-item-section side>
+                                    <q-icon name="add_circle" color="blue-9" size="28px" />
+                                  </q-item-section>
+                                </q-item>
+                              </q-list>
+                            </q-card>
+                          </div>
+
+                          <!-- Validación visual -->
+                          <div v-if="!aprendizActual.outcomes || aprendizActual.outcomes.length === 0" class="q-mt-sm text-caption text-red">
+                            Debes agregar al menos un resultado de aprendizaje
+                          </div>
                         </div>
 
                         <div class="col-12">
@@ -1114,6 +1302,14 @@ const busquedaInstructor = ref("");
 const fichasResultados = ref([]);
 const instructoresResultados = ref([]);
 
+// Búsquedas de competencias y resultados de aprendizaje
+const busquedaCompetencia = ref("");
+const competenciasResultados = ref([]);
+const loadingCompetencias = ref(false);
+const busquedaResultado = ref("");
+const resultadosResultados = ref([]);
+const loadingResultados = ref(false);
+
 // Búsqueda de comités
 const busquedaComite = ref("");
 const comitesFiltrados = ref([]);
@@ -1173,7 +1369,9 @@ const comitesRows = ref([]);
 // Computados
 const aprendicesCompletados = computed(() => {
   return wizardData.value.aprendices.filter(
-    (a) => a.noveltyType && a.description && a.manual && a.competencesText && a.outcomesText
+    (a) => a.noveltyType && a.description && a.manual &&
+         a.competences && a.competences.length > 0 &&
+         a.outcomes && a.outcomes.length > 0
   ).length;
 });
 
@@ -1299,6 +1497,122 @@ function cerrarResultadosInstructores() {
   busquedaInstructorRealizada.value = false;
 }
 
+// Búsqueda de competencias
+async function buscarCompetencia() {
+  if (!busquedaCompetencia.value || busquedaCompetencia.value.trim().length === 0) {
+    $q.notify({ message: "Ingrese texto para buscar competencias", color: "orange", position: "top" });
+    return;
+  }
+
+  try {
+    loadingCompetencias.value = true;
+    competenciasResultados.value = [];
+
+    // Si hay una ficha seleccionada, filtrar por su programa
+    const programId = wizardData.value.fichaObj?.program?._id;
+
+    const res = await get("/comites/search/competences", {
+      search: busquedaCompetencia.value.trim(),
+      ...(programId && { program: programId })
+    });
+    const resultados = Array.isArray(res) ? res : (res?.data || []);
+    competenciasResultados.value = resultados;
+  } catch (error) {
+    console.log("Error buscando competencias:", error);
+    competenciasResultados.value = [];
+  } finally {
+    loadingCompetencias.value = false;
+  }
+}
+
+function agregarCompetencia(competencia) {
+  if (!aprendizActual.value) return;
+
+  // Verificar si ya está agregada
+  if (aprendizActual.value.competences && aprendizActual.value.competences.some(c => c._id === competencia._id)) {
+    $q.notify({
+      message: "La competencia ya está agregada",
+      color: "orange",
+      position: "top",
+    });
+    return;
+  }
+
+  if (!aprendizActual.value.competences) {
+    aprendizActual.value.competences = [];
+  }
+  aprendizActual.value.competences.push(competencia);
+  busquedaCompetencia.value = "";
+  competenciasResultados.value = [];
+
+  $q.notify({
+    message: "Competencia agregada correctamente",
+    color: "green-9",
+    position: "top",
+  });
+}
+
+function eliminarCompetencia(competenciaId) {
+  if (!aprendizActual.value || !aprendizActual.value.competences) return;
+  aprendizActual.value.competences = aprendizActual.value.competences.filter(c => c._id !== competenciaId);
+}
+
+// Búsqueda de resultados de aprendizaje
+async function buscarResultado() {
+  if (!busquedaResultado.value || busquedaResultado.value.trim().length === 0) {
+    $q.notify({ message: "Ingrese texto para buscar resultados de aprendizaje", color: "orange", position: "top" });
+    return;
+  }
+
+  try {
+    loadingResultados.value = true;
+    resultadosResultados.value = [];
+
+    const res = await get("/comites/search/outcomes", {
+      search: busquedaResultado.value.trim()
+    });
+    const resultados = Array.isArray(res) ? res : (res?.data || []);
+    resultadosResultados.value = resultados;
+  } catch (error) {
+    console.log("Error buscando resultados de aprendizaje:", error);
+    resultadosResultados.value = [];
+  } finally {
+    loadingResultados.value = false;
+  }
+}
+
+function agregarResultado(resultado) {
+  if (!aprendizActual.value) return;
+
+  // Verificar si ya está agregado
+  if (aprendizActual.value.outcomes && aprendizActual.value.outcomes.some(o => o._id === resultado._id)) {
+    $q.notify({
+      message: "El resultado de aprendizaje ya está agregado",
+      color: "orange",
+      position: "top",
+    });
+    return;
+  }
+
+  if (!aprendizActual.value.outcomes) {
+    aprendizActual.value.outcomes = [];
+  }
+  aprendizActual.value.outcomes.push(resultado);
+  busquedaResultado.value = "";
+  resultadosResultados.value = [];
+
+  $q.notify({
+    message: "Resultado de aprendizaje agregado correctamente",
+    color: "green-9",
+    position: "top",
+  });
+}
+
+function eliminarResultado(resultadoId) {
+  if (!aprendizActual.value || !aprendizActual.value.outcomes) return;
+  aprendizActual.value.outcomes = aprendizActual.value.outcomes.filter(o => o._id !== resultadoId);
+}
+
 function validarPaso1() {
   if (!wizardData.value.ficha) {
     $q.notify({ message: "Por favor selecciona una ficha", color: "red", position: "top" });
@@ -1317,6 +1631,42 @@ function agregarAprendiz() {
     }
   }
 
+  // Validar documento: solo números
+  if (!/^\d+$/.test(nuevoAprendiz.value.documentNumber)) {
+    $q.notify({ message: "El número de documento debe contener solo números", color: "red", position: "top" });
+    return;
+  }
+
+  // Validar documento: mínimo 7 dígitos
+  if (nuevoAprendiz.value.documentNumber.length < 7) {
+    $q.notify({ message: "El número de documento debe tener mínimo 7 dígitos", color: "red", position: "top" });
+    return;
+  }
+
+  // Validar teléfono: solo números
+  if (!/^\d+$/.test(nuevoAprendiz.value.phone)) {
+    $q.notify({ message: "El teléfono debe contener solo números", color: "red", position: "top" });
+    return;
+  }
+
+  // Validar teléfono: mínimo 7 dígitos
+  if (nuevoAprendiz.value.phone.length < 7) {
+    $q.notify({ message: "El teléfono debe tener mínimo 7 dígitos", color: "red", position: "top" });
+    return;
+  }
+
+  // Validar nombre: solo letras y espacios, mínimo 2 palabras
+  const nameRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+  if (!nameRegex.test(nuevoAprendiz.value.fullname)) {
+    $q.notify({ message: "El nombre solo debe contener letras y espacios", color: "red", position: "top" });
+    return;
+  }
+
+  if (nuevoAprendiz.value.fullname.trim().split(' ').length < 2) {
+    $q.notify({ message: "El nombre debe incluir al menos nombre y apellido", color: "red", position: "top" });
+    return;
+  }
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(nuevoAprendiz.value.email)) {
     $q.notify({ message: "Formato de correo electrónico inválido", color: "red", position: "top" });
@@ -1331,6 +1681,8 @@ function agregarAprendiz() {
     noveltyType: "",
     description: "",
     manual: "",
+    competences: [],
+    outcomes: [],
     competencesText: "",
     outcomesText: "",
     evidenceFile: null,
@@ -1388,7 +1740,9 @@ function onFileSelected(event, aprendiz) {
 
 async function guardarComite() {
   const incompletos = wizardData.value.aprendices.filter(
-    (a) => !a.noveltyType || !a.description || !a.manual || !a.competencesText || !a.outcomesText
+    (a) => !a.noveltyType || !a.description || !a.manual ||
+         !a.competences || a.competences.length === 0 ||
+         !a.outcomes || a.outcomes.length === 0
   );
 
   if (incompletos.length > 0) {
@@ -1412,8 +1766,8 @@ async function guardarComite() {
         noveltyType: a.noveltyType,
         description: a.description,
         manual: a.manual,
-        competences: a.competencesText ? a.competencesText.split(',').map(s => s.trim()).filter(s => s) : [],
-        outcomes: a.outcomesText ? a.outcomesText.split(',').map(s => s.trim()).filter(s => s) : [],
+        competences: a.competences ? a.competences.map(c => c._id) : [],
+        outcomes: a.outcomes ? a.outcomes.map(o => o._id) : [],
       })),
     };
 
@@ -1453,6 +1807,12 @@ async function limpiarWizard() {
   busquedaInstructor.value = "";
   busquedaFichaRealizada.value = false;
   busquedaInstructorRealizada.value = false;
+
+  // Limpiar búsquedas de competencias y resultados
+  busquedaCompetencia.value = "";
+  competenciasResultados.value = [];
+  busquedaResultado.value = "";
+  resultadosResultados.value = [];
 
   // Cargar instructor actual y pre-agregarlo como bloqueado
   await cargarInstructorActual();
@@ -1586,6 +1946,29 @@ async function cancelarComite(row) {
     } catch (error) {
       console.log("Error cancelando comité:", error);
       $q.notify({ message: "Error al cancelar comité", color: "red", position: "top" });
+    }
+  });
+}
+
+async function solicitarCancelacion(row) {
+  $q.dialog({
+    title: "Solicitar Cancelación de Comité",
+    message: "¿Estás seguro de solicitar la cancelación de este comité? La solicitud deberá ser aprobada por el área de Novedades.",
+    ok: { label: "Sí, solicitar", class: "bg-orange text-white" },
+    cancel: { label: "No", flat: true, class: "text-grey" },
+    prompt: {
+      model: "",
+      type: "text",
+      label: "Razón de la solicitud (opcional)"
+    }
+  }).onOk(async (reason) => {
+    try {
+      await post(`/comites/${row._id}/request-cancellation`, { reason });
+      $q.notify({ message: "Solicitud de cancelación enviada correctamente", color: "green-9", position: "top" });
+      await cargarComites();
+    } catch (error) {
+      console.log("Error solicitando cancelación:", error);
+      $q.notify({ message: "Error al solicitar la cancelación", color: "red", position: "top" });
     }
   });
 }
@@ -1897,6 +2280,7 @@ onMounted(() => {
 .dialog-body {
   max-height: calc(90vh - 180px);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .dialog-footer {
@@ -1929,6 +2313,44 @@ onMounted(() => {
   opacity: 0;
   animation: fadeSlideInLeft 300ms var(--ease-out) forwards;
   transition: background-color 150ms var(--ease-out);
+}
+
+/* Items de resultados de búsqueda - manejo de textos largos */
+.result-item :deep(.q-item__label) {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.result-item :deep(.q-item__label--caption) {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  max-width: 100%;
+}
+
+/* Chips de competencias y resultados - manejo de textos largos */
+:deep(.q-chip) {
+  max-width: 100%;
+  height: auto;
+  min-height: 28px;
+}
+
+:deep(.q-chip__content) {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+  padding: 4px 0;
+}
+
+/* Mantener el botón X alineado correctamente */
+:deep(.q-chip .q-chip__icon--remove) {
+  align-self: flex-start;
+  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 @media (hover: hover) and (pointer: fine) {

@@ -20,11 +20,16 @@ const {
   registerCommittee,
   updateCommittee,
   cancelCommittee,
+  requestCancellation,
+  approveCancellation,
+  rejectCancellation,
   getCommitteesByFiche,
   getPendingCommittees,
   getScheduledCommittees,
   searchFiches,
   searchInstructors,
+  searchCompetences,
+  searchOutcomes,
 } = committeeCtrl;
 
 const routerComites = Router();
@@ -292,7 +297,7 @@ routerComites.put("/:id", authenticateComitesToken, updateCommittee);
  * @swagger
  * /api/comites/:id/cancel:
  *   put:
- *     summary: Cancela un comité (requiere autenticación)
+ *     summary: Cancela un comité directamente (requiere autenticación)
  *     tags: [Comites]
  *     security:
  *       - bearerAuth: []
@@ -311,6 +316,108 @@ routerComites.put("/:id", authenticateComitesToken, updateCommittee);
  *         description: No autorizado
  */
 routerComites.put("/:id/cancel", authenticateComitesToken, cancelCommittee);
+
+/**
+ * @swagger
+ * /api/comites/:id/request-cancellation:
+ *   post:
+ *     summary: Solicitar cancelación de un comité (requiere autenticación de instructor)
+ *     tags: [Comites]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Razón de la solicitud de cancelación
+ *     responses:
+ *       200:
+ *         description: Solicitud de cancelación enviada correctamente
+ *       400:
+ *         description: Error al solicitar cancelación
+ *       401:
+ *         description: No autorizado
+ */
+routerComites.post("/:id/request-cancellation", authenticateComitesToken, requestCancellation);
+
+/**
+ * @swagger
+ * /api/comites/:id/approve-cancellation:
+ *   put:
+ *     summary: Aprobar solicitud de cancelación de un comité (requiere autenticación de Novedades)
+ *     tags: [Comites]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               note:
+ *                 type: string
+ *                 description: Nota de la decisión
+ *     responses:
+ *       200:
+ *         description: Cancelación aprobada correctamente
+ *       400:
+ *         description: Error al aprobar cancelación
+ *       401:
+ *         description: No autorizado
+ */
+routerComites.put("/:id/approve-cancellation", authenticateComitesToken, approveCancellation);
+
+/**
+ * @swagger
+ * /api/comites/:id/reject-cancellation:
+ *   put:
+ *     summary: Rechazar solicitud de cancelación de un comité (requiere autenticación de Novedades)
+ *     tags: [Comites]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               note:
+ *                 type: string
+ *                 description: Nota del rechazo
+ *     responses:
+ *       200:
+ *         description: Solicitud de cancelación rechazada correctamente
+ *       400:
+ *         description: Error al rechazar cancelación
+ *       401:
+ *         description: No autorizado
+ */
+routerComites.put("/:id/reject-cancellation", authenticateComitesToken, rejectCancellation);
 
 // ==================== Búsquedas para comités ====================
 
@@ -349,5 +456,51 @@ routerComites.get("/search/fiches", searchFiches);
  *         description: Lista de instructores encontrados
  */
 routerComites.get("/search/instructors", searchInstructors);
+
+/**
+ * @swagger
+ * /api/comites/search/competences:
+ *   get:
+ *     summary: Buscar competencias por nombre, número o programa
+ *     tags: [Comites]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Texto a buscar en nombre o número de competencia
+ *       - in: query
+ *         name: program
+ *         schema:
+ *           type: string
+ *         description: ID del programa para filtrar competencias
+ *     responses:
+ *       200:
+ *         description: Lista de competencias encontradas
+ */
+routerComites.get("/search/competences", searchCompetences);
+
+/**
+ * @swagger
+ * /api/comites/search/outcomes:
+ *   get:
+ *     summary: Buscar resultados de aprendizaje por código, descripción o competencia
+ *     tags: [Comites]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Texto a buscar en código o descripción del resultado
+ *       - in: query
+ *         name: competence
+ *         schema:
+ *           type: string
+ *         description: ID de la competencia para filtrar resultados
+ *     responses:
+ *       200:
+ *         description: Lista de resultados de aprendizaje encontrados
+ */
+routerComites.get("/search/outcomes", searchOutcomes);
 
 export { routerComites };

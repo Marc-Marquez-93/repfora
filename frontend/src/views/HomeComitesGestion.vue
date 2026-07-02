@@ -58,6 +58,14 @@
                         <q-chip size="sm" class="bg-orange-6 text-white">
                           {{ getEstadoLabel(comite.status) }}
                         </q-chip>
+                        <!-- Badge de solicitud de cancelación -->
+                        <q-chip v-if="comite.cancellationRequested && comite.cancellationStatus === 'PENDING'"
+                          size="sm"
+                          class="bg-red text-white"
+                          icon="pending_actions"
+                        >
+                          Solicita cancelación
+                        </q-chip>
                       </div>
                     </div>
 
@@ -121,30 +129,61 @@
                     <!-- Botones -->
                     <div class="col-auto">
                       <div class="row q-gutter-xs">
-                        <q-btn
-                          flat
-                          color="grey-7"
-                          label="Detalles"
-                          class="btn-press"
-                          size="md"
-                          @click="verDetalles(comite)"
-                        />
-                        <q-btn
-                          flat
-                          color="red"
-                          label="Cancelar"
-                          class="btn-press"
-                          size="md"
-                          @click="confirmarCancelar(comite)"
-                        />
-                        <q-btn
-                          unelevated
-                          color="green-9"
-                          label="Agendar"
-                          class="btn-press"
-                          size="md"
-                          @click="agendarReunion(comite)"
-                        />
+                        <!-- Botones normales (sin solicitud de cancelación) -->
+                        <template v-if="!(comite.cancellationRequested && comite.cancellationStatus === 'PENDING')">
+                          <q-btn
+                            flat
+                            color="grey-7"
+                            label="Detalles"
+                            class="btn-press"
+                            size="md"
+                            @click="verDetalles(comite)"
+                          />
+                          <q-btn
+                            flat
+                            color="red"
+                            label="Cancelar"
+                            class="btn-press"
+                            size="md"
+                            @click="confirmarCancelar(comite)"
+                          />
+                          <q-btn
+                            unelevated
+                            color="green-9"
+                            label="Agendar"
+                            class="btn-press"
+                            size="md"
+                            @click="agendarReunion(comite)"
+                          />
+                        </template>
+
+                        <!-- Botones cuando hay solicitud de cancelación pendiente -->
+                        <template v-else>
+                          <q-btn
+                            flat
+                            color="grey-7"
+                            label="Detalles"
+                            class="btn-press"
+                            size="md"
+                            @click="verDetalles(comite)"
+                          />
+                          <q-btn
+                            unelevated
+                            color="green-9"
+                            label="Aprobar"
+                            class="btn-press"
+                            size="md"
+                            @click="aprobarCancelacion(comite)"
+                          />
+                          <q-btn
+                            unelevated
+                            color="red"
+                            label="Rechazar"
+                            class="btn-press"
+                            size="md"
+                            @click="rechazarCancelacion(comite)"
+                          />
+                        </template>
                       </div>
                     </div>
                   </div>
@@ -1231,7 +1270,7 @@
     </q-dialog>
 
     <!-- Dialog: Ver Detalles -->
-    <q-dialog v-model="dialogDetalles">
+    <q-dialog v-model="dialogDetalles" v-if="comiteSeleccionado">
       <q-card class="dialog-card dialog-card-large">
         <q-card-section class="bg-green-9 dialog-header">
           <div class="row items-center">
@@ -1246,7 +1285,15 @@
           </div>
         </q-card-section>
 
-        <q-card-section class="q-pa-md dialog-body" v-if="comiteSeleccionado">
+        <q-card-section class="q-pa-md dialog-body">
+          <!-- Loading indicator -->
+          <div v-if="loadingDetalles" class="flex flex-center q-pa-xl">
+            <q-spinner color="green-9" size="3em" />
+            <div class="text-caption text-grey-7 q-ml-md">Cargando detalles...</div>
+          </div>
+
+          <!-- Content when loaded -->
+          <div v-else>
           <!-- Información general -->
           <div class="row q-col-gutter-md q-mb-md">
             <div class="col-12 col-md-6">
@@ -1333,6 +1380,8 @@
               </q-item-section>
             </q-item>
           </q-list>
+          </div>
+          <!-- Fin del contenido cuando está cargado -->
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -1354,6 +1403,7 @@ const cargando = ref(true);
 const guardando = ref(false);
 const todosComites = ref([]);
 const comiteSeleccionado = ref(null);
+const loadingDetalles = ref(false);
 
 // Dialogs
 const dialogAgendar = ref(false);
@@ -1502,10 +1552,61 @@ async function cargarComites() {
   }
 }
 
-function verDetalles(comite) {
-  comiteSeleccionado.value = comite;
-  dialogDetalles.value = true;
+
+async function verDetalles(comite) {
+  console.log("=== verDetalles llamado ===");
+  console.log("Comite recibido:", comite);
+
+  try {
+    loadingDetalles.value = true;
+
+    // Primero asignar el comite de la lista para que haya algo inmediatamente
+    comiteSeleccionado.value = {
+      ...comite,
+      ficha: comite.ficha || 'N/A',
+      nombrePrograma: comite.nombrePrograma || 'Sin nombre'
+    };
+    console.log("Comité inicial asignado:", comiteSeleccionado.value);
+
+    // Abrir el diálogo
+    dialogDetalles.value = true;
+    console.log("Diálogo abierto:", dialogDetalles.value);
+
+    // Luego obtener los detalles completos
+    console.log("Obteniendo detalles del comité:", comite._id);
+    const res = await get(`/comites/${comite._id}`);
+    console.log("Respuesta del backend:", res);
+
+    // Manejar diferentes estructuras de respuesta
+    let data = res;
+    if (res?.data && typeof res.data === 'object') {
+      data = res.data;
+    }
+
+    // Actualizar con los datos completos
+    if (data && data._id) {
+      comiteSeleccionado.value = {
+        ...data,
+        ficha: data.fiche?.number || data.ficha || comite.ficha || 'N/A',
+        nombrePrograma: data.fiche?.program?.name || data.nombrePrograma || comite.nombrePrograma || 'Sin nombre'
+      };
+      console.log("Comité actualizado con datos completos:", comiteSeleccionado.value);
+    }
+  } catch (error) {
+    console.error("Error obteniendo detalles del comité:", error);
+    // Si hay error, al menos ya asignamos el comite de la lista al principio
+    $q.notify({
+      message: "Usando información básica del comité",
+      color: "orange",
+      position: "top",
+      timeout: 2000
+    });
+  } finally {
+    loadingDetalles.value = false;
+    console.log("=== verDetalles completado ===");
+  }
 }
+
 
 function agendarReunion(comite) {
   comiteSeleccionado.value = comite;
@@ -1542,7 +1643,12 @@ function modificarAgendamiento(comite) {
 async function obtenerDetallesComiteParaEditar(comite, dialogRef) {
   try {
     const res = await get(`/comites/${comite._id}`);
-    const comiteCompleto = res || comite; // Usar el resultado o fallback al original
+    const data = res?.data || res || comite; // Usar el resultado o fallback al original
+    const comiteCompleto = {
+      ...data,
+      ficha: data.fiche?.number || comite.ficha || 'N/A',
+      nombrePrograma: data.fiche?.program?.name || comite.nombrePrograma || 'Sin nombre'
+    };
 
     comiteSeleccionado.value = comiteCompleto;
     const participantes = comiteCompleto.meetingAdditionalParticipants || [];
@@ -1739,6 +1845,52 @@ function confirmarCancelar(comite) {
     } catch (error) {
       console.log("Error cancelando:", error);
       $q.notify({ message: "Error al cancelar comité", color: "red", position: "top" });
+    }
+  });
+}
+
+async function aprobarCancelacion(comite) {
+  $q.dialog({
+    title: "Aprobar Cancelación",
+    message: `¿Estás seguro de aprobar la cancelación del comité de la ficha ${comite.ficha}?`,
+    ok: { label: "Sí, aprobar", class: "bg-green-9 text-white" },
+    cancel: { label: "No", flat: true, class: "text-red" },
+    prompt: {
+      model: "",
+      type: "text",
+      label: "Nota (opcional)"
+    }
+  }).onOk(async (note) => {
+    try {
+      await put(`/comites/${comite._id}/approve-cancellation`, { note });
+      $q.notify({ message: "Cancelación aprobada correctamente", color: "green-9", position: "top" });
+      await cargarComites();
+    } catch (error) {
+      console.log("Error aprobando cancelación:", error);
+      $q.notify({ message: "Error al aprobar la cancelación", color: "red", position: "top" });
+    }
+  });
+}
+
+async function rechazarCancelacion(comite) {
+  $q.dialog({
+    title: "Rechazar Cancelación",
+    message: `¿Estás seguro de rechazar la solicitud de cancelación del comité de la ficha ${comite.ficha}?`,
+    ok: { label: "Sí, rechazar", class: "bg-red text-white" },
+    cancel: { label: "No", flat: true, class: "text-grey" },
+    prompt: {
+      model: "",
+      type: "text",
+      label: "Nota del rechazo (opcional)"
+    }
+  }).onOk(async (note) => {
+    try {
+      await put(`/comites/${comite._id}/reject-cancellation`, { note });
+      $q.notify({ message: "Solicitud de cancelación rechazada correctamente", color: "green-9", position: "top" });
+      await cargarComites();
+    } catch (error) {
+      console.log("Error rechazando cancelación:", error);
+      $q.notify({ message: "Error al rechazar la cancelación", color: "red", position: "top" });
     }
   });
 }

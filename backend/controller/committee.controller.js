@@ -1,6 +1,8 @@
 import Committee from "../models/Committee.js";
 import Fiche from "../models/Fiche.js";
 import Instructor from "../models/Instructor.js";
+import Competence from "../models/Competence.js";
+import Outcome from "../models/Outcome.js";
 import registerAction from "../middlewares/binnacle.js";
 
 const committeeCtrl = {};
@@ -254,6 +256,156 @@ committeeCtrl.cancelCommittee = async (req, res) => {
   }
 };
 
+// Solicitar cancelación de comité (por instructor)
+committeeCtrl.requestCancellation = async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  try {
+    const committee = await Committee.findById(id);
+    if (!committee) {
+      return res.status(404).json({ msg: "Comité no encontrado" });
+    }
+
+    if (committee.status !== "PENDING") {
+      return res.status(400).json({ msg: "Solo se pueden solicitar cancelación de comités en estado PENDIENTE" });
+    }
+
+    if (committee.cancellationRequested) {
+      return res.status(400).json({ msg: "Ya existe una solicitud de cancelación para este comité" });
+    }
+
+    // Usar el usuario autenticado del token
+    const instructorId = req.user?.id;
+    if (!instructorId) {
+      return res.status(401).json({ msg: "No se pudo identificar al usuario autenticado" });
+    }
+
+    committee.cancellationRequested = true;
+    committee.cancellationRequestedBy = instructorId;
+    committee.cancellationRequestedAt = new Date();
+    committee.cancellationReason = reason || "";
+    committee.cancellationStatus = "PENDING";
+
+    await committee.save();
+
+    await registerAction(
+      "COMITE",
+      {
+        event: "SOLICITAR CANCELACION",
+        data: { committeeId: id, reason }
+      },
+      req.headers.token
+    );
+
+    res.json({ msg: "Solicitud de cancelación enviada correctamente" });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ msg: "No fue posible solicitar la cancelación" });
+  }
+};
+
+// Aprobar solicitud de cancelación (por Novedades)
+committeeCtrl.approveCancellation = async (req, res) => {
+  const { id } = req.params;
+  const { note } = req.body;
+
+  try {
+    const committee = await Committee.findById(id);
+    if (!committee) {
+      return res.status(404).json({ msg: "Comité no encontrado" });
+    }
+
+    if (!committee.cancellationRequested) {
+      return res.status(400).json({ msg: "No hay solicitud de cancelación para este comité" });
+    }
+
+    if (committee.cancellationStatus !== "PENDING") {
+      return res.status(400).json({ msg: "La solicitud de cancelación ya fue procesada" });
+    }
+
+    // Usar el usuario autenticado del token
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ msg: "No se pudo identificar al usuario autenticado" });
+    }
+
+    committee.cancellationStatus = "APPROVED";
+    committee.cancellationDecisionBy = userId;
+    committee.cancellationDecisionAt = new Date();
+    committee.cancellationDecisionNote = note || "";
+    committee.status = "CANCELLED";
+
+    await committee.save();
+
+    await registerAction(
+      "COMITE",
+      {
+        event: "APROBAR CANCELACION",
+        data: { committeeId: id, note }
+      },
+      req.headers.token
+    );
+
+    res.json({ msg: "Cancelación aprobada correctamente" });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ msg: "No fue posible aprobar la cancelación" });
+  }
+};
+
+// Rechazar solicitud de cancelación (por Novedades)
+committeeCtrl.rejectCancellation = async (req, res) => {
+  const { id } = req.params;
+  const { note } = req.body;
+
+  try {
+    const committee = await Committee.findById(id);
+    if (!committee) {
+      return res.status(404).json({ msg: "Comité no encontrado" });
+    }
+
+    if (!committee.cancellationRequested) {
+      return res.status(400).json({ msg: "No hay solicitud de cancelación para este comité" });
+    }
+
+    if (committee.cancellationStatus !== "PENDING") {
+      return res.status(400).json({ msg: "La solicitud de cancelación ya fue procesada" });
+    }
+
+    // Usar el usuario autenticado del token
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ msg: "No se pudo identificar al usuario autenticado" });
+    }
+
+    committee.cancellationStatus = "REJECTED";
+    committee.cancellationDecisionBy = userId;
+    committee.cancellationDecisionAt = new Date();
+    committee.cancellationDecisionNote = note || "";
+    committee.cancellationRequested = false;
+    committee.cancellationRequestedBy = null;
+    committee.cancellationRequestedAt = null;
+    committee.cancellationReason = "";
+
+    await committee.save();
+
+    await registerAction(
+      "COMITE",
+      {
+        event: "RECHAZAR CANCELACION",
+        data: { committeeId: id, note }
+      },
+      req.headers.token
+    );
+
+    res.json({ msg: "Solicitud de cancelación rechazada correctamente" });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ msg: "No fue posible rechazar la cancelación" });
+  }
+};
+
 // Obtener comités por ficha
 committeeCtrl.getCommitteesByFiche = async (req, res) => {
   const { ficheId } = req.params;
@@ -386,6 +538,70 @@ committeeCtrl.searchInstructors = async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(400).json({ msg: "Error al buscar instructores" });
+  }
+};
+
+// Buscar competencias por nombre, número o programa
+committeeCtrl.searchCompetences = async (req, res) => {
+  const { search, program } = req.query;
+
+  try {
+    let query = { status: 0 };
+
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      query.$or = [
+        { name: { $regex: searchTerm, $options: "i" } },
+        { number: { $regex: searchTerm, $options: "i" } }
+      ];
+    }
+
+    // Si se proporciona un programa, filtrar por ese programa
+    if (program && program.trim()) {
+      query.program = program.trim();
+    }
+
+    const competences = await Competence.find(query)
+      .populate("program")
+      .sort({ name: 1 })
+      .limit(50);
+
+    res.json(competences);
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ msg: "Error al buscar competencias" });
+  }
+};
+
+// Buscar resultados de aprendizaje por código, descripción o competencia
+committeeCtrl.searchOutcomes = async (req, res) => {
+  const { search, competence } = req.query;
+
+  try {
+    let query = { status: 0 };
+
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      query.$or = [
+        { outcomes: { $regex: searchTerm, $options: "i" } },
+        { code: { $regex: searchTerm, $options: "i" } }
+      ];
+    }
+
+    // Si se proporciona una competencia, filtrar por esa competencia
+    if (competence && competence.trim()) {
+      query.competence = competence.trim();
+    }
+
+    const outcomes = await Outcome.find(query)
+      .populate("competence")
+      .sort({ code: 1 })
+      .limit(100);
+
+    res.json(outcomes);
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({ msg: "Error al buscar resultados de aprendizaje" });
   }
 };
 
