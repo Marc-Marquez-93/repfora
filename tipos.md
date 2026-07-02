@@ -81,7 +81,41 @@ Para cada registro de aprendiz en ambas tablas se debe proveer:
 
 ---
 
-## 🎨 Fase 3: Adornos y Pulido Estético
-- [ ] Integrar animaciones de transición fluidas en las pantallas del flujo condicional (Fase 1).
-- [ ] Incorporar librerías visuales para alertas (e.g., SweetAlert2) para la validación de exclusividad en condicionamiento/cancelación.
-- [ ] Asegurar que el diseño sea totalmente responsivo y coherente con la paleta de colores de REPFORA.
+## 📋 Fase 3: Integraciones de Backend y Generación de Documentos (A Futuro)
+
+### Paso 3.1: Generación de PDFs con jsPDF
+Utilizando la librería `jsPDF` (https://github.com/parallax/jsPDF.git), se deben generar dos tipos de documentos institucionales. Ambos deben incluir el logotipo del SENA ubicado en [logoComites.png](file:///c:/Users/USUARIO/Downloads/una/repfora/backend/public/images/logoComites.png) y tener un formato formal/institucional:
+- [ ] **Documento de Orden del Día (Al Agendar Comité)**:
+  - Generado automáticamente al guardar/agendar el comité.
+  - Contenido: Fecha del comité, Lugar, Objeto de la sesión (Analizar el caso de los aprendices citados), listado de Aprendices Citados a Descargos, programa de formación, ficha, temas del orden del día (Saludo, Quórum, Hechos, etc.), Quórum de asistencia (Coordinador Académico, Instructores, Bienestar, Apoyo a Novedades, Vocero, Representante, etc.).
+- [ ] **Documento de Acta/Resumen de Cierre (Al Terminar Comité)**:
+  - Generado al pasar el estado del comité de "Agendado" a "Terminado".
+  - Contenido: Todos los datos generales del comité (Fecha, Hora, Lugar, Quórum), y una sección final detallada de **Decisiones** indicando qué sanción (Plan de Mejoramiento con instructor y fecha límite, Llamado de Atención, Condicionamiento o Cancelación de Matrícula con sus datos de resolución correspondientes) se aplicó individualmente a cada aprendiz.
+
+### Paso 3.2: Envío de Correos Automáticos (Nodemailer)
+Utilizando la lógica estructurada en [comites.js](backend/utils/emails/comites.js), se configurará el envío automático de correos (máximo 3 tipos de correos durante todo el ciclo del comité):
+- [ ] **Correo 1: Citación al Comité (Al Agendar)**:
+  - Destinatarios: Todos los participantes involucrados (Coordinador, Instructores solicitantes/invitados, Bienestar, Novedades, Vocero, Representante y los Aprendices citados).
+  - Adjunto: El archivo PDF de la *Orden del Día* generado en el Paso 3.1.
+- [ ] **Correo 2: Notificación de Modificación (Al Reagendar/Editar)**:
+  - Destinatarios: Todos los participantes involucrados.
+  - Se activa si se cambian datos de fecha, hora o lugar del comité agendado.
+  - Adjunto: El PDF actualizado de la *Orden del Día*.
+- [ ] **Correo 3: Resumen de Finalización (Al Completar)**:
+  - Destinatarios: Todos los participantes del comité.
+  - Enviado inmediatamente cuando el comité cambia su estado a "Completado/Terminado".
+  - Adjunto: El PDF del *Acta/Resumen de Cierre* generado en el Paso 3.1.
+
+### Paso 3.3: Gestión de Archivos en Google Drive (OAuth)
+Por facilidad, esta integración se dejará para el final del desarrollo:
+- [ ] Almacenar automáticamente en la carpeta de Google Drive configurada:
+  - Los documentos/evidencias adjuntos subidos originalmente al solicitar el comité.
+  - El PDF de la *Orden del Día* (y su versión actualizada si se edita).
+  - El PDF final del *Resumen de Cierre* generado al terminar el comité.
+
+### Paso 3.4: Generación Automática de Novedades Académicas
+Al presionar el botón "Completar Comité" en el frontend:
+- [ ] Si la decisión incluye **Plan de Mejoramiento**: Generar automáticamente la novedad correspondiente (este tipo ya existe en el sistema).
+- [ ] Si la decisión incluye **Condicionamiento de Matrícula** o **Cancelación de Matrícula**:
+  - Generar automáticamente la novedad correspondiente.
+  - *Regla Crítica*: Estos dos tipos de novedades solo pueden crearse a través del flujo automático de "Completar Comité". **Nunca** deben estar disponibles como opciones de creación manual desde la interfaz gráfica del panel general de Novedades.
