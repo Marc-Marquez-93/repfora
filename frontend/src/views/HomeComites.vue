@@ -1344,7 +1344,7 @@ const documentTypeOptions = ref(["CC", "CE", "TI", "PPT"]);
 const noveltyTypeOptions = ref([
   { label: "ACADÉMICA", value: "ACADEMIC" },
   { label: "DISCIPLINARIA", value: "DISCIPLINARY" },
-  { label: "AMBAS", value: "BOTH" }
+  { label: "LOS DOS TIPOS", value: "BOTH" }
 ]);
 const manualOptions = ref([
   "Artículo 45 - Falta Académica Leve",

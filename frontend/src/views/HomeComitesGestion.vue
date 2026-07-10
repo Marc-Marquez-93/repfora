@@ -51,17 +51,17 @@
                   <div class="row items-center q-col-gutter-sm">
                     <!-- Ficha y Estado -->
                     <div class="col-auto">
-                      <div class="row items-center q-gutter-xs">
-                        <div class="ficha-badge ficha-pendiente">
+                      <div class="row items-center">
+                        <div class="ficha-badge">
                           <span class="text-weight-bold">{{ comite.ficha }}</span>
                         </div>
-                        <q-chip size="sm" class="bg-orange-6 text-white">
+                        <q-chip size="sm" class="status-chip status-pending">
                           {{ getEstadoLabel(comite.status) }}
                         </q-chip>
                         <!-- Badge de solicitud de cancelación -->
                         <q-chip v-if="comite.cancellationRequested && comite.cancellationStatus === 'PENDING'"
                           size="sm"
-                          class="bg-red text-white"
+                          class="status-chip status-cancel"
                           icon="pending_actions"
                         >
                           Solicita cancelación
@@ -70,60 +70,61 @@
                     </div>
 
                     <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
+                    <div class="col-auto sep-line">|</div>
 
                     <!-- Aprendices -->
                     <div class="col">
                       <div class="row items-center q-gutter-xs no-wrap">
-                        <span class="text-caption text-grey-7" style="font-size: 14px;">Aprendices:</span>
+                        <q-icon name="school" size="16px" class="text-grey-5">
+                          <q-tooltip>Aprendices</q-tooltip>
+                        </q-icon>
                         <q-chip
                           v-for="(learner, idx) in comite.learners.slice(0, 3)"
                           :key="'l-'+idx"
                           size="sm"
-                          class="bg-orange-1 text-orange-9"
+                          class="chip-neutral"
                           dense
-                          style="font-size: 14px;"
                         >
                           {{ learner.name }}
                           <q-tooltip>{{ learner.documentType }}: {{ learner.documentNumber }}</q-tooltip>
                         </q-chip>
-                        <q-chip v-if="comite.learners.length > 3" size="sm" class="bg-grey-2" dense>
+                        <q-chip v-if="comite.learners.length > 3" size="sm" class="chip-more" dense>
                           +{{ comite.learners.length - 3 }}
                         </q-chip>
                       </div>
                     </div>
 
                     <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
+                    <div class="col-auto sep-line">|</div>
 
                     <!-- Instructores -->
                     <div class="col">
                       <div class="row items-center q-gutter-xs">
-                        <span class="text-caption text-grey-7 q-mr-xs" style="font-size: 14px;">Instructores:</span>
+                        <q-icon name="person" size="16px" class="text-grey-5">
+                          <q-tooltip>Instructores</q-tooltip>
+                        </q-icon>
                         <q-chip
                           v-for="(instructor, idx) in getInstructoresOrganizados(comite).slice(0, 2)"
                           :key="'i-'+idx"
                           size="sm"
-                          :class="instructor.esCreador ? 'bg-green-9 text-white' : 'bg-green-1 text-green-9'"
+                          :class="instructor.esCreador ? 'chip-creator' : 'chip-neutral'"
                           dense
-                          style="font-size: 14px;"
                         >
-                          <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">person</span>
                           {{ instructor.name }}
                           <q-tooltip v-if="instructor.esCreador">Solicitó el comité</q-tooltip>
                         </q-chip>
-                        <q-chip v-if="getInstructoresOrganizados(comite).length > 2" size="sm" class="bg-grey-2" dense>
+                        <q-chip v-if="getInstructoresOrganizados(comite).length > 2" size="sm" class="chip-more" dense>
                           +{{ getInstructoresOrganizados(comite).length - 2 }}
                         </q-chip>
                       </div>
                     </div>
 
                     <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
+                    <div class="col-auto sep-line">|</div>
 
                     <!-- Fecha -->
                     <div class="col-auto">
-                      <span class="text-caption text-grey-6">{{ formatDateShort(comite.createdAt) }}</span>
+                      <span class="text-caption text-grey-5">{{ formatDateShort(comite.createdAt) }}</span>
                     </div>
 
                     <!-- Botones -->
@@ -132,57 +133,63 @@
                         <!-- Botones normales (sin solicitud de cancelación) -->
                         <template v-if="!(comite.cancellationRequested && comite.cancellationStatus === 'PENDING')">
                           <q-btn
-                            flat
-                            color="grey-7"
-                            label="Detalles"
-                            class="btn-press"
-                            size="md"
+                            flat round
+                            color="grey-6"
+                            icon="info_outline"
+                            class="btn-press action-icon-btn"
                             @click="verDetalles(comite)"
-                          />
+                          >
+                            <q-tooltip>Detalles</q-tooltip>
+                          </q-btn>
                           <q-btn
-                            flat
-                            color="red"
-                            label="Cancelar"
-                            class="btn-press"
-                            size="md"
+                            flat round
+                            color="negative"
+                            icon="cancel"
+                            class="btn-press action-icon-btn"
                             @click="confirmarCancelar(comite)"
-                          />
+                          >
+                            <q-tooltip>Cancelar comité</q-tooltip>
+                          </q-btn>
                           <q-btn
-                            unelevated
+                            unelevated round
                             color="green-9"
-                            label="Agendar"
-                            class="btn-press"
-                            size="md"
+                            icon="event_available"
+                            class="btn-press action-icon-btn"
                             @click="agendarReunion(comite)"
-                          />
+                          >
+                            <q-tooltip>Agendar reunión</q-tooltip>
+                          </q-btn>
                         </template>
 
                         <!-- Botones cuando hay solicitud de cancelación pendiente -->
                         <template v-else>
                           <q-btn
-                            flat
-                            color="grey-7"
-                            label="Detalles"
-                            class="btn-press"
-                            size="md"
+                            flat round
+                            color="grey-6"
+                            icon="info_outline"
+                            class="btn-press action-icon-btn"
                             @click="verDetalles(comite)"
-                          />
+                          >
+                            <q-tooltip>Detalles</q-tooltip>
+                          </q-btn>
                           <q-btn
-                            unelevated
+                            unelevated round
                             color="green-9"
-                            label="Aprobar"
-                            class="btn-press"
-                            size="md"
+                            icon="check_circle"
+                            class="btn-press action-icon-btn"
                             @click="aprobarCancelacion(comite)"
-                          />
+                          >
+                            <q-tooltip>Aprobar cancelación</q-tooltip>
+                          </q-btn>
                           <q-btn
-                            unelevated
-                            color="red"
-                            label="Rechazar"
-                            class="btn-press"
-                            size="md"
+                            unelevated round
+                            color="negative"
+                            icon="block"
+                            class="btn-press action-icon-btn"
                             @click="rechazarCancelacion(comite)"
-                          />
+                          >
+                            <q-tooltip>Rechazar cancelación</q-tooltip>
+                          </q-btn>
                         </template>
                       </div>
                     </div>
@@ -206,113 +213,126 @@
               <q-card
                 v-for="(comite, index) in comitesAgendados"
                 :key="comite._id"
-                class="comite-card-horizontal q-mb-sm bg-blue-1"
+                class="comite-card-horizontal q-mb-sm"
                 :style="{ animationDelay: `${index * 40}ms` }"
               >
                 <q-card-section class="q-pa-sm">
                   <div class="row items-center q-col-gutter-sm">
                     <!-- Ficha y Estado -->
                     <div class="col-auto">
-                      <div class="row items-center q-gutter-xs">
-                        <div class="ficha-badge ficha-agendado">
+                      <div class="row items-center">
+                        <div class="ficha-badge">
                           <span class="text-weight-bold">{{ comite.ficha }}</span>
                         </div>
-                        <q-chip size="sm" class="bg-blue-8 text-white" dense>
-                          <q-icon name="event" size="14px" class="q-mr-xs" />
+                        <q-chip size="sm" class="status-chip status-scheduled" dense>
+                          <q-icon name="event" size="13px" class="q-mr-xs" />
                           {{ getEstadoLabel(comite.status) }}
                         </q-chip>
                       </div>
                     </div>
 
                     <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
+                    <div class="col-auto sep-line">|</div>
 
                     <!-- Aprendices -->
                     <div class="col">
                       <div class="row items-center q-gutter-xs no-wrap">
-                        <span class="text-caption text-grey-7" style="font-size: 14px;">Aprendices:</span>
+                        <q-icon name="school" size="16px" class="text-grey-5">
+                          <q-tooltip>Aprendices</q-tooltip>
+                        </q-icon>
                         <q-chip
                           v-for="(learner, idx) in comite.learners.slice(0, 3)"
                           :key="'l-'+idx"
                           size="sm"
-                          class="bg-blue-2 text-blue-9"
+                          class="chip-neutral"
                           dense
-                          style="font-size: 14px;"
                         >
                           {{ learner.name }}
                         </q-chip>
-                        <q-chip v-if="comite.learners.length > 3" size="sm" class="bg-grey-2" dense>
+                        <q-chip v-if="comite.learners.length > 3" size="sm" class="chip-more" dense>
                           +{{ comite.learners.length - 3 }}
                         </q-chip>
                       </div>
                     </div>
 
                     <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
+                    <div class="col-auto sep-line">|</div>
 
                     <!-- Instructores -->
                     <div class="col">
                       <div class="row items-center q-gutter-xs">
-                        <span class="text-caption text-grey-7 q-mr-xs" style="font-size: 14px;">Instructores:</span>
+                        <q-icon name="person" size="16px" class="text-grey-5">
+                          <q-tooltip>Instructores</q-tooltip>
+                        </q-icon>
                         <q-chip
                           v-for="(instructor, idx) in getInstructoresOrganizados(comite).slice(0, 2)"
                           :key="'i-'+idx"
                           size="sm"
-                          :class="instructor.esCreador ? 'bg-green-9 text-white' : 'bg-green-1 text-green-9'"
+                          :class="instructor.esCreador ? 'chip-creator' : 'chip-neutral'"
                           dense
-                          style="font-size: 14px;"
                         >
-                          <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">person</span>
                           {{ instructor.name }}
                           <q-tooltip v-if="instructor.esCreador">Solicitó el comité</q-tooltip>
                         </q-chip>
-                        <q-chip v-if="getInstructoresOrganizados(comite).length > 2" size="sm" class="bg-grey-2" dense>
+                        <q-chip v-if="getInstructoresOrganizados(comite).length > 2" size="sm" class="chip-more" dense>
                           +{{ getInstructoresOrganizados(comite).length - 2 }}
                         </q-chip>
                       </div>
                     </div>
 
                     <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
+                    <div class="col-auto sep-line">|</div>
 
                     <!-- Fecha reunión -->
                     <div class="col-auto">
                       <div class="row items-center q-gutter-xs">
-                        <span class="material-symbols-outlined text-grey-6" style="font-size: 16px">schedule</span>
-                        <span class="text-caption text-grey-7">{{ formatDate(comite.meetingDate) }}</span>
+                        <q-icon name="schedule" size="15px" class="text-grey-5" />
+                        <span class="text-caption text-grey-6">{{ formatDate(comite.meetingDate) }}</span>
                       </div>
                     </div>
 
                     <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
+                    <div class="col-auto sep-line">|</div>
 
                     <!-- Botones -->
                     <div class="col-auto">
                       <div class="row q-gutter-xs">
                         <q-btn
-                          flat
-                          color="grey-7"
-                          label="Detalles"
-                          class="btn-press"
-                          size="md"
+                          flat round
+                          color="grey-6"
+                          icon="info_outline"
+                          class="btn-press action-icon-btn"
                           @click="verDetalles(comite)"
-                        />
+                        >
+                          <q-tooltip>Detalles</q-tooltip>
+                        </q-btn>
                         <q-btn
-                          flat
-                          color="blue-9"
-                          label="Modificar"
-                          class="btn-press"
-                          size="md"
-                          @click="modificarAgendamiento(comite)"
-                        />
-                        <q-btn
-                          unelevated
+                          flat round
                           color="green-9"
-                          label="Completar"
-                          class="btn-press"
-                          size="md"
+                          icon="picture_as_pdf"
+                          class="btn-press action-icon-btn"
+                          @click="verOrdenDelDiaPDF(comite)"
+                        >
+                          <q-tooltip>Ver Orden del Día</q-tooltip>
+                        </q-btn>
+                        <q-btn
+                          flat round
+                          color="grey-6"
+                          icon="edit_calendar"
+                          class="btn-press action-icon-btn"
+                          @click="modificarAgendamiento(comite)"
+                        >
+                          <q-tooltip>Modificar agendamiento</q-tooltip>
+                        </q-btn>
+                        <q-btn
+                          unelevated round
+                          color="green-9"
+                          icon="task_alt"
+                          class="btn-press action-icon-btn"
                           @click="marcarCompletado(comite)"
-                        />
+                        >
+                          <q-tooltip>Marcar como completado</q-tooltip>
+                        </q-btn>
                       </div>
                     </div>
                   </div>
@@ -335,98 +355,101 @@
               <q-card
                 v-for="(comite, index) in comitesCompletados"
                 :key="comite._id"
-                class="comite-card-horizontal q-mb-sm bg-green-1"
+                class="comite-card-horizontal q-mb-sm"
                 :style="{ animationDelay: `${index * 40}ms` }"
               >
                 <q-card-section class="q-pa-sm">
                   <div class="row items-center q-col-gutter-sm">
                     <!-- Ficha y Estado -->
                     <div class="col-auto">
-                      <div class="row items-center q-gutter-xs">
-                        <div class="ficha-badge ficha-completado">
+                      <div class="row items-center">
+                        <div class="ficha-badge">
                           <span class="text-weight-bold">{{ comite.ficha }}</span>
                         </div>
-                        <q-chip size="sm" class="bg-green-9 text-white" dense>
-                          <q-icon name="check" size="14px" class="q-mr-xs" />
+                        <q-chip size="sm" class="status-chip status-completed" dense>
+                          <q-icon name="check" size="13px" class="q-mr-xs" />
                           {{ getEstadoLabel(comite.status) }}
                         </q-chip>
-                        <q-chip v-if="comite.resolutionNumber" size="sm" class="bg-purple-1 text-purple-9" dense>
-                          Res. {{ comite.resolutionNumber }}
+                        <q-chip v-if="comite.resolutionNumber" size="sm" class="chip-resolution" dense>
+                          <q-icon name="gavel" size="12px" class="q-mr-xs" />
+                          {{ comite.resolutionNumber }}
                         </q-chip>
                       </div>
                     </div>
 
                     <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
+                    <div class="col-auto sep-line">|</div>
 
                     <!-- Aprendices -->
                     <div class="col">
                       <div class="row items-center q-gutter-xs no-wrap">
-                        <span class="text-caption text-grey-7" style="font-size: 14px;">Aprendices:</span>
+                        <q-icon name="school" size="16px" class="text-grey-5">
+                          <q-tooltip>Aprendices</q-tooltip>
+                        </q-icon>
                         <q-chip
                           v-for="(learner, idx) in comite.learners.slice(0, 3)"
                           :key="'l-'+idx"
                           size="sm"
-                          class="bg-green-2 text-green-9"
+                          class="chip-neutral"
                           dense
-                          style="font-size: 14px;"
                         >
                           {{ learner.name }}
                         </q-chip>
-                        <q-chip v-if="comite.learners.length > 3" size="sm" class="bg-grey-2" dense>
+                        <q-chip v-if="comite.learners.length > 3" size="sm" class="chip-more" dense>
                           +{{ comite.learners.length - 3 }}
                         </q-chip>
                       </div>
                     </div>
 
                     <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
+                    <div class="col-auto sep-line">|</div>
 
                     <!-- Instructores -->
                     <div class="col">
                       <div class="row items-center q-gutter-xs">
-                        <span class="text-caption text-grey-7 q-mr-xs" style="font-size: 14px;">Instructores:</span>
+                        <q-icon name="person" size="16px" class="text-grey-5">
+                          <q-tooltip>Instructores</q-tooltip>
+                        </q-icon>
                         <q-chip
                           v-for="(instructor, idx) in getInstructoresOrganizados(comite).slice(0, 2)"
                           :key="'i-'+idx"
                           size="sm"
-                          :class="instructor.esCreador ? 'bg-green-9 text-white' : 'bg-green-1 text-green-9'"
+                          :class="instructor.esCreador ? 'chip-creator' : 'chip-neutral'"
                           dense
-                          style="font-size: 14px;"
                         >
-                          <span class="material-symbols-outlined q-mr-xs" style="font-size: 14px">person</span>
                           {{ instructor.name }}
                           <q-tooltip v-if="instructor.esCreador">Solicitó el comité</q-tooltip>
                         </q-chip>
-                        <q-chip v-if="getInstructoresOrganizados(comite).length > 2" size="sm" class="bg-grey-2" dense>
+                        <q-chip v-if="getInstructoresOrganizados(comite).length > 2" size="sm" class="chip-more" dense>
                           +{{ getInstructoresOrganizados(comite).length - 2 }}
                         </q-chip>
                       </div>
                     </div>
 
-                    <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
 
-                    <!-- Gravedad -->
-                    <div class="col-auto">
-                      <q-chip size="sm" class="bg-red-1 text-red-9" dense>
-                        {{ getGravedadLabel(comite.faultSeverity) }}
-                      </q-chip>
-                    </div>
-
-                    <!-- Separador -->
-                    <div class="col-auto text-grey-4">|</div>
 
                     <!-- Botones -->
                     <div class="col-auto">
-                      <q-btn
-                        flat
-                        color="grey-7"
-                        label="Ver resolución"
-                        class="btn-press"
-                        size="md"
-                        @click="verDetalles(comite)"
-                      />
+                      <div class="row q-gutter-xs">
+                        <q-btn
+                          flat round
+                          color="grey-6"
+                          icon="info_outline"
+                          class="btn-press action-icon-btn"
+                          @click="verDetalles(comite)"
+                        >
+                          <q-tooltip>Detalles</q-tooltip>
+                        </q-btn>
+                        <q-btn
+                          flat round
+                          color="green-9"
+                          icon="picture_as_pdf"
+                          class="btn-press action-icon-btn"
+                          @click="verActaCierrePDF(comite)"
+                        >
+                          <q-tooltip>Ver Acta de Cierre</q-tooltip>
+                        </q-btn>
+                      </div>
                     </div>
                   </div>
                 </q-card-section>
@@ -1370,8 +1393,32 @@
                 </q-item-label>
               </q-item-section>
               <q-item-section side>
+                <!-- Mostrar severidad individual -->
                 <q-chip
-                  v-if="learner.decision && learner.decision !== 'PENDING'"
+                  v-if="learner.severidad"
+                  size="sm"
+                  outline
+                  color="grey-8"
+                  class="q-mr-xs"
+                >
+                  Falta: {{ (learner.severidad === 'LEVE' || learner.severidad === 'LIGHT') ? 'Leve' : (learner.severidad === 'GRAVE' || learner.severidad === 'SERIOUS') ? 'Grave' : (learner.severidad === 'GRAVISIMA' || learner.severidad === 'VERY_SERIOUS') ? 'Gravísima' : learner.severidad }}
+                </q-chip>
+
+                <!-- Mostrar múltiples decisiones -->
+                <div class="row q-gutter-xs justify-end inline" v-if="learner.decisiones && learner.decisiones.length > 0">
+                  <q-chip
+                    v-for="(dec, dIdx) in learner.decisiones"
+                    :key="'dec-'+dIdx"
+                    size="sm"
+                    :class="getDecisionChipClass(dec)"
+                  >
+                    {{ getDecisionLabel(dec) }}
+                  </q-chip>
+                </div>
+
+                <!-- Fallback a decisión única (si fue un comité antiguo) -->
+                <q-chip
+                  v-else-if="learner.decision && learner.decision !== 'PENDING'"
                   size="sm"
                   :class="getDecisionChipClass(learner.decision)"
                 >
@@ -1383,6 +1430,266 @@
           </div>
           <!-- Fin del contenido cuando está cargado -->
         </q-card-section>
+
+        <q-card-actions align="right" class="bg-grey-1 q-pa-sm" v-if="!loadingDetalles">
+          <q-btn 
+            v-if="comiteSeleccionado.status === 'SCHEDULED'" 
+            unelevated 
+            color="green-9" 
+            icon="description" 
+            label="Orden del Día" 
+            @click="generarOrdenDelDia(comiteSeleccionado)" 
+          />
+          <q-btn 
+            v-if="comiteSeleccionado.status === 'COMPLETED'" 
+            unelevated 
+            color="green-9" 
+            icon="description" 
+            label="Acta de Cierre" 
+            @click="generarActaCierre(comiteSeleccionado)" 
+          />
+          <q-btn flat label="Cerrar" color="grey-7" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Dialog: Completar Comité -->
+    <q-dialog v-model="dialogCompletar" persistent>
+      <q-card class="dialog-card dialog-card-large">
+        <q-card-section class="bg-green-9 dialog-header">
+          <div class="row items-center">
+            <div class="col-10">
+              <h5 class="q-mt-sm q-mb-sm text-white text-weight-bold">
+                EVALUACIÓN Y CIERRE DE COMITÉ
+              </h5>
+            </div>
+            <div class="col-2 text-right">
+              <q-btn flat round icon="close" color="white" class="btn-press" @click="dialogCompletar = false" />
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-md dialog-body">
+          <div v-if="comiteSeleccionado" class="q-mb-md">
+            <div class="row q-col-gutter-md items-center">
+              <div class="col-12 col-md-6">
+                <div class="text-subtitle2 text-weight-bold text-green-9">
+                  Ficha: {{ comiteSeleccionado.ficha }}
+                </div>
+                <div class="text-caption text-grey-7">{{ comiteSeleccionado.nombrePrograma }}</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <q-select
+                  filled
+                  dense
+                  v-model="completarInstructoresInvitados"
+                  multiple
+                  use-chips
+                  :options="instructores"
+                  option-label="name"
+                  option-value="_id"
+                  emit-value
+                  map-options
+                  label="Instructores Invitados (Editar)"
+                  class="bg-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-sm">Evaluación por Aprendiz</div>
+
+          <q-list bordered class="rounded-borders">
+            <q-expansion-item
+              v-for="(data, index) in completarData"
+              :key="data.learnerId"
+              group="aprendices"
+              default-opened
+              header-style="min-height: 75px; padding: 12px 16px; overflow: visible;"
+            >
+              <template v-slot:header>
+                <q-item-section avatar style="overflow: visible;">
+                  <q-avatar icon="school" color="green-9" text-color="white" size="sm" />
+                </q-item-section>
+                <q-item-section style="overflow: visible; padding-top: 4px;">
+                  <q-item-label class="text-weight-bold text-green-9" style="line-height: 1.5; font-size: 14px;">{{ data.name }}</q-item-label>
+                  <q-item-label caption style="line-height: 1.5; font-size: 12px; margin-top: 2px;">{{ data.documentType }}: {{ data.documentNumber }}</q-item-label>
+                </q-item-section>
+              </template>
+              <q-card>
+                <q-card-section class="q-pt-none">
+                  <div class="row q-col-gutter-md">
+                    <div class="col-12 col-md-6">
+                      <q-select
+                        filled
+                        v-model="data.severidad"
+                        :options="opcionesSeveridad"
+                        label="Severidad de la Falta *"
+                        emit-value
+                        map-options
+                      >
+                        <template v-slot:prepend>
+                          <q-icon name="report_problem" />
+                        </template>
+                      </q-select>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <q-select
+                        filled
+                        v-model="data.decisiones"
+                        :options="getOpcionesDecision(data)"
+                        label="Decisión(es) a Tomar *"
+                        multiple
+                        emit-value
+                        map-options
+                        use-chips
+                        @update:model-value="onDecisionesChange(data)"
+                      >
+                        <template v-slot:prepend>
+                          <q-icon name="gavel" />
+                        </template>
+                        <template v-slot:option="{ itemProps, opt, selected, toggleOption }">
+                          <q-item v-bind="itemProps" :disable="opt.disable">
+                            <q-item-section side>
+                              <q-checkbox :model-value="selected" @update:model-value="toggleOption(opt)" :disable="opt.disable" color="green-9" />
+                            </q-item-section>
+                            <q-item-section>
+                              <q-item-label v-html="opt.label" />
+                            </q-item-section>
+                          </q-item>
+                        </template>
+                      </q-select>
+                    </div>
+                  </div>
+
+                  <!-- FLUJO CONDICIONAL -->
+                  <div v-if="data.decisiones.length > 0" class="q-mt-md">
+                    
+                    <!-- Ruta B: Plan de Mejoramiento -->
+                    <div v-if="data.decisiones.includes('PLAN_MEJORAMIENTO')" class="q-mb-md">
+                      <q-card class="bg-blue-1 no-shadow bordered border-blue-2">
+                        <q-card-section>
+                          <div class="text-subtitle2 text-blue-9 q-mb-sm">Plan de Mejoramiento</div>
+                          <div class="row q-col-gutter-sm">
+                            <div class="col-12">
+                              <q-select
+                                filled
+                                v-model="data.instructoresPlan"
+                                :options="data.instructoresDisponibles"
+                                option-label="name"
+                                option-value="_id"
+                                label="Instructores Encargados *"
+                                multiple
+                                emit-value
+                                map-options
+                                use-chips
+                                bg-color="white"
+                                @update:model-value="onInstructoresPlanChange(data)"
+                              />
+                            </div>
+                            
+                            <!-- Campos dinámicos por instructor -->
+                            <div class="col-12" v-for="(plan, pIdx) in data.planesMejoramiento" :key="'plan-'+pIdx">
+                              <div class="bg-white q-pa-sm rounded-borders border-blue-2 q-mb-sm">
+                                <div class="text-caption text-weight-bold text-blue-8 q-mb-xs">
+                                  Plan a cargo de: {{ getInstructorName(plan.instructorId, data.instructoresDisponibles) }}
+                                </div>
+                                <div class="row q-col-gutter-sm">
+                                  <div class="col-12 col-md-8">
+                                    <q-input
+                                      filled dense
+                                      v-model="plan.descripcion"
+                                      label="Descripción del plan *"
+                                    />
+                                  </div>
+                                  <div class="col-12 col-md-4">
+                                    <q-input
+                                      filled dense
+                                      v-model="plan.fechaMaxima"
+                                      label="Fecha límite *"
+                                      type="date"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </q-card-section>
+                      </q-card>
+                    </div>
+
+                    <!-- Ruta C: Condicionamiento / Cancelación -->
+                    <div v-if="data.decisiones.includes('CONDICIONAMIENTO') || data.decisiones.includes('CANCELACION')" class="q-mb-md">
+                      <q-card class="bg-red-1 no-shadow bordered border-red-2">
+                        <q-card-section>
+                          <!-- Vista de Confirmación inicial -->
+                          <div v-if="!data.confirmacionRutaC" class="text-center q-pa-sm">
+                            <q-icon name="warning" color="red-9" size="md" class="q-mb-sm" />
+                            <div class="text-subtitle2 text-red-9 q-mb-md">
+                              ¿Está seguro de que desea aplicar <strong>{{ data.decisiones.includes('CANCELACION') ? 'Cancelación' : 'Condicionamiento' }} de Matrícula</strong> a este aprendiz?
+                            </div>
+                            <q-btn unelevated color="red-9" label="Sí, aplicar sanción" @click="data.confirmacionRutaC = true" class="q-mr-sm" />
+                            <q-btn outline color="grey-8" label="Quitar decisión" @click="quitarDecisionSevera(data)" />
+                          </div>
+
+                          <!-- Formulario de Resolución -->
+                          <div v-else>
+                            <div class="row items-center justify-between q-mb-sm">
+                              <div class="text-subtitle2 text-red-9">
+                                Datos de Resolución ({{ data.decisiones.includes('CANCELACION') ? 'Cancelación' : 'Condicionamiento' }})
+                              </div>
+                              <q-btn flat round color="grey-7" icon="undo" size="sm" @click="data.confirmacionRutaC = false">
+                                <q-tooltip>Volver a confirmar</q-tooltip>
+                              </q-btn>
+                            </div>
+
+                            <q-checkbox 
+                              v-model="data.resolucionDespues" 
+                              label="Añadir esta información después (Guardar temporalmente)" 
+                              color="red-9"
+                              class="q-mb-sm"
+                            />
+
+                            <div class="row q-col-gutter-sm" v-if="!data.resolucionDespues">
+                              <div class="col-12 col-md-6">
+                                <q-input
+                                  filled dense bg-color="white"
+                                  v-model="data.resolucionNumero"
+                                  label="Número de Resolución *"
+                                />
+                              </div>
+                              <div class="col-12 col-md-6">
+                                <q-input
+                                  filled dense bg-color="white"
+                                  v-model="data.resolucionFecha"
+                                  label="Fecha de Resolución *"
+                                  type="date"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </q-card-section>
+                      </q-card>
+                    </div>
+
+                  </div>
+                </q-card-section>
+              </q-card>
+            </q-expansion-item>
+          </q-list>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancelar" color="grey-7" class="btn-press" @click="dialogCompletar = false" />
+          <q-btn
+            unelevated
+            color="green-9"
+            label="Completar Comité"
+            @click="guardarCompletado"
+            :loading="guardando"
+            class="btn-press"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
   </div>
@@ -1391,9 +1698,10 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useQuasar } from "quasar";
-import { get, put } from "../services/api.js";
+import { get, put, post } from "../services/api.js";
 import BtnBack from "../layouts/btnBackLayout.vue";
 import HeaderLayout from "../layouts/headerViewsLayout.vue";
+import { generarOrdenDelDia, generarActaCierre } from "../utils/pdfComites.js";
 
 const $q = useQuasar();
 
@@ -1409,6 +1717,65 @@ const loadingDetalles = ref(false);
 const dialogAgendar = ref(false);
 const dialogModificar = ref(false);
 const dialogDetalles = ref(false);
+const dialogCompletar = ref(false);
+
+const completarData = ref([]);
+const completarInstructoresInvitados = ref([]);
+
+const opcionesSeveridad = [
+  { label: 'Leve', value: 'LEVE' },
+  { label: 'Grave', value: 'GRAVE' },
+  { label: 'Gravísima', value: 'GRAVISIMA' }
+];
+
+function getOpcionesDecision(learnerData) {
+  return [
+    { label: 'Plan de Mejoramiento', value: 'PLAN_MEJORAMIENTO' },
+    { label: 'Llamado de Atención', value: 'LLAMADO_ATENCION' },
+    { label: 'Condicionamiento de Matrícula', value: 'CONDICIONAMIENTO', disable: learnerData.decisiones.includes('CANCELACION') },
+    { label: 'Cancelación de Matrícula', value: 'CANCELACION', disable: learnerData.decisiones.includes('CONDICIONAMIENTO') }
+  ];
+}
+
+// Eventos de la vista condicional
+function onDecisionesChange(data) {
+  // Limpiar datos de Ruta B si se desmarcó
+  if (!data.decisiones.includes('PLAN_MEJORAMIENTO')) {
+    data.instructoresPlan = [];
+    data.planesMejoramiento = [];
+  }
+  // Limpiar datos de Ruta C si se desmarcó
+  if (!data.decisiones.includes('CONDICIONAMIENTO') && !data.decisiones.includes('CANCELACION')) {
+    data.confirmacionRutaC = false;
+    data.resolucionNumero = '';
+    data.resolucionFecha = '';
+    data.resolucionDespues = false;
+  }
+}
+
+function onInstructoresPlanChange(data) {
+  // Sincronizar el array de planes con los instructores seleccionados
+  const nuevosPlanes = [];
+  for (const instructorId of data.instructoresPlan) {
+    const planExistente = data.planesMejoramiento.find(p => p.instructorId === instructorId);
+    if (planExistente) {
+      nuevosPlanes.push(planExistente);
+    } else {
+      nuevosPlanes.push({ instructorId, descripcion: '', fechaMaxima: '' });
+    }
+  }
+  data.planesMejoramiento = nuevosPlanes;
+}
+
+function quitarDecisionSevera(data) {
+  data.decisiones = data.decisiones.filter(d => d !== 'CONDICIONAMIENTO' && d !== 'CANCELACION');
+  onDecisionesChange(data);
+}
+
+function getInstructorName(instructorId, lista) {
+  const inst = lista.find(i => i._id === instructorId);
+  return inst ? inst.name : 'Desconocido';
+}
 
 // Formulario de agendamiento extendido
 const agendamiento = ref({
@@ -1607,6 +1974,44 @@ async function verDetalles(comite) {
   }
 }
 
+async function verOrdenDelDiaPDF(comite) {
+  try {
+    $q.loading.show({ message: 'Generando PDF...' });
+    const res = await get(`/comites/${comite._id}`);
+    const comiteFresquito = res?.data || res;
+    const comiteMapeado = {
+      ...comiteFresquito,
+      ficha: comiteFresquito.fiche?.number || comite.ficha || 'N/A',
+      nombrePrograma: comiteFresquito.fiche?.program?.name || comite.nombrePrograma || 'Sin nombre'
+    };
+    await generarOrdenDelDia(comiteMapeado);
+  } catch (error) {
+    console.error("Error al visualizar PDF:", error);
+    $q.notify({ message: "No se pudo generar el PDF", color: "red", position: "top" });
+  } finally {
+    $q.loading.hide();
+  }
+}
+
+async function verActaCierrePDF(comite) {
+  try {
+    $q.loading.show({ message: 'Generando PDF...' });
+    const res = await get(`/comites/${comite._id}`);
+    const comiteFresquito = res?.data || res;
+    const comiteMapeado = {
+      ...comiteFresquito,
+      ficha: comiteFresquito.fiche?.number || comite.ficha || 'N/A',
+      nombrePrograma: comiteFresquito.fiche?.program?.name || comite.nombrePrograma || 'Sin nombre'
+    };
+    await generarActaCierre(comiteMapeado);
+  } catch (error) {
+    console.error("Error al visualizar PDF:", error);
+    $q.notify({ message: "No se pudo generar el PDF", color: "red", position: "top" });
+  } finally {
+    $q.loading.hide();
+  }
+}
+
 
 function agendarReunion(comite) {
   comiteSeleccionado.value = comite;
@@ -1781,6 +2186,24 @@ async function guardarAgendamiento() {
     $q.notify({ message: "Reunión agendada correctamente", color: "green-9", position: "top" });
     dialogAgendar.value = false;
     pasoAgendar.value = 1;
+
+    const comiteId = comiteSeleccionado.value._id;
+
+    // Generar PDF Orden del Día (sin bloquear)
+    try {
+      const resDetalle = await get(`/comites/${comiteId}`);
+      const comiteFresquito = resDetalle?.data || resDetalle;
+      generarOrdenDelDia(comiteFresquito);
+    } catch (pdfErr) {
+      console.error("Error generando PDF de Orden del Día:", pdfErr);
+      $q.notify({ message: "No se pudo abrir el PDF de Orden del Día", color: "orange-9", position: "top" });
+    }
+
+    // Enviar correo de citación (en segundo plano, sin bloquear)
+    post(`/comites/${comiteId}/send-email`, { tipo: 'CITACION' })
+      .then(() => $q.notify({ message: "Correos de citación enviados", color: "green-9", position: "top", timeout: 3000 }))
+      .catch(() => $q.notify({ message: "No se pudieron enviar los correos de citación", color: "orange-9", position: "top" }));
+
     await cargarComites();
   } catch (error) {
     console.log("Error agendando:", error);
@@ -1822,6 +2245,12 @@ async function guardarModificacion() {
     $q.notify({ message: "Agendamiento modificado correctamente", color: "green-9", position: "top" });
     dialogModificar.value = false;
     pasoAgendar.value = 1;
+
+    // Enviar correo de modificación (en segundo plano)
+    post(`/comites/${comiteSeleccionado.value._id}/send-email`, { tipo: 'MODIFICACION' })
+      .then(() => $q.notify({ message: "Correos de modificación enviados", color: "green-9", position: "top", timeout: 3000 }))
+      .catch(() => $q.notify({ message: "No se pudieron enviar los correos de modificación", color: "orange-9", position: "top" }));
+
     await cargarComites();
   } catch (error) {
     console.log("Error modificando:", error);
@@ -1896,21 +2325,109 @@ async function rechazarCancelacion(comite) {
 }
 
 function marcarCompletado(comite) {
-  $q.dialog({
-    title: "Marcar como Completado",
-    message: `¿Estás seguro de marcar como completado el comité de la ficha ${comite.ficha}?`,
-    ok: { label: "Sí, completar", class: "bg-green-9 text-white" },
-    cancel: { label: "No", flat: true, class: "text-red" },
-  }).onOk(async () => {
-    try {
-      await put(`/comites/${comite._id}`, { status: 'COMPLETED' });
-      $q.notify({ message: "Comité marcado como completado", color: "green-9", position: "top" });
-      await cargarComites();
-    } catch (error) {
-      console.log("Error completando:", error);
-      $q.notify({ message: "Error al marcar como completado", color: "red", position: "top" });
+  comiteSeleccionado.value = comite;
+  
+  // Pre-calcular los instructores del comité para Ruta B
+  const instructoresDisponibles = getInstructoresOrganizados(comite);
+  
+  completarData.value = (comite.learners || []).map(l => ({
+    learnerId: l._id,
+    name: l.name,
+    documentType: l.documentType || 'CC',
+    documentNumber: l.documentNumber || '',
+    severidad: null,
+    decisiones: [],
+    // Ruta B: Plan de Mejoramiento
+    instructoresPlan: [],
+    planesMejoramiento: [], // Guardará { instructorId, descripcion, fechaMaxima }
+    instructoresDisponibles, // Opciones para el q-select
+    // Ruta C: Condicionamiento / Cancelación
+    confirmacionRutaC: false,
+    resolucionNumero: '',
+    resolucionFecha: '',
+    resolucionDespues: false
+  }));
+  completarInstructoresInvitados.value = (comite.meetingInvitedInstructors || []).map(i => i._id || i);
+  dialogCompletar.value = true;
+}
+
+async function guardarCompletado() {
+  // Validar
+  for (const data of completarData.value) {
+    if (!data.severidad) {
+      $q.notify({ message: `Falta seleccionar severidad para ${data.name}`, color: 'red', position: 'top' });
+      return;
     }
-  });
+    if (!data.decisiones || data.decisiones.length === 0) {
+      $q.notify({ message: `Falta seleccionar al menos una decisión para ${data.name}`, color: 'red', position: 'top' });
+      return;
+    }
+    
+    // Validar Ruta B
+    if (data.decisiones.includes('PLAN_MEJORAMIENTO')) {
+      if (data.instructoresPlan.length === 0) {
+        $q.notify({ message: `Selecciona al menos un instructor para el plan de ${data.name}`, color: 'red', position: 'top' });
+        return;
+      }
+      for (const plan of data.planesMejoramiento) {
+        if (!plan.descripcion || !plan.fechaMaxima) {
+          $q.notify({ message: `Completa la descripción y fecha del plan para ${data.name}`, color: 'red', position: 'top' });
+          return;
+        }
+      }
+    }
+
+    // Validar Ruta C
+    if (data.decisiones.includes('CONDICIONAMIENTO') || data.decisiones.includes('CANCELACION')) {
+      if (!data.confirmacionRutaC) {
+        $q.notify({ message: `Debes confirmar la sanción de ${data.name}`, color: 'red', position: 'top' });
+        return;
+      }
+      if (!data.resolucionDespues && (!data.resolucionNumero || !data.resolucionFecha)) {
+        $q.notify({ message: `Ingresa el número y fecha de resolución para ${data.name}`, color: 'red', position: 'top' });
+        return;
+      }
+    }
+  }
+
+  try {
+    guardando.value = true;
+    const payload = {
+      status: 'COMPLETED',
+      meetingInvitedInstructors: completarInstructoresInvitados.value,
+      learners: completarData.value.map(data => ({
+        ...data,
+        _id: data.learnerId
+      }))
+    };
+    await put(`/comites/${comiteSeleccionado.value._id}`, payload);
+    $q.notify({ message: "Comité marcado como completado", color: "green-9", position: "top" });
+    dialogCompletar.value = false;
+
+    const comiteId = comiteSeleccionado.value._id;
+
+    // Generar PDF Acta de Cierre (sin bloquear)
+    try {
+      const resDetalle = await get(`/comites/${comiteId}`);
+      const comiteFresquito = resDetalle?.data || resDetalle;
+      generarActaCierre(comiteFresquito);
+    } catch (pdfErr) {
+      console.error("Error generando PDF de Acta de Cierre:", pdfErr);
+      $q.notify({ message: "No se pudo abrir el PDF de Acta de Cierre", color: "orange-9", position: "top" });
+    }
+
+    // Enviar correo de finalización (en segundo plano)
+    post(`/comites/${comiteId}/send-email`, { tipo: 'FINALIZACION' })
+      .then(() => $q.notify({ message: "Correos de finalización enviados", color: "green-9", position: "top", timeout: 3000 }))
+      .catch(() => $q.notify({ message: "No se pudieron enviar los correos de finalización", color: "orange-9", position: "top" }));
+
+    await cargarComites();
+  } catch (error) {
+    console.log("Error completando:", error);
+    $q.notify({ message: "Error al marcar como completado", color: "red", position: "top" });
+  } finally {
+    guardando.value = false;
+  }
 }
 
 // Funciones de utilidad
@@ -1949,7 +2466,7 @@ function getNoveltyTypeLabel(type) {
   const labels = {
     ACADEMIC: "ACADÉMICA",
     DISCIPLINARY: "DISCIPLINARIA",
-    BOTH: "AMBAS"
+    BOTH: "LOS DOS TIPOS"
   };
   return labels[type] || type;
 }
@@ -1967,9 +2484,13 @@ function getGravedadLabel(severity) {
 function getDecisionLabel(decision) {
   const labels = {
     PLAN_DE_MEJORAMIENTO: "Plan de Mejoramiento",
+    PLAN_MEJORAMIENTO: "Plan de Mejoramiento",
     LLAMADO_DE_ATENCION: "Llamado de Atención",
+    LLAMADO_ATENCION: "Llamado de Atención",
     CONDICIONAMIENTO_DE_MATRICULA: "Condicionamiento",
+    CONDICIONAMIENTO: "Condicionamiento",
     CANCELACION_DE_MATRICULA: "Cancelación",
+    CANCELACION: "Cancelación",
     OTRA: "Otra",
     PENDING: "Pendiente"
   };
@@ -1979,9 +2500,13 @@ function getDecisionLabel(decision) {
 function getDecisionChipClass(decision) {
   const classes = {
     PLAN_DE_MEJORAMIENTO: "bg-yellow-1 text-yellow-9",
+    PLAN_MEJORAMIENTO: "bg-yellow-1 text-yellow-9",
     LLAMADO_DE_ATENCION: "bg-orange-1 text-orange-9",
+    LLAMADO_ATENCION: "bg-orange-1 text-orange-9",
     CONDICIONAMIENTO_DE_MATRICULA: "bg-red-1 text-red-9",
+    CONDICIONAMIENTO: "bg-red-1 text-red-9",
     CANCELACION_DE_MATRICULA: "bg-red text-white",
+    CANCELACION: "bg-red text-white",
     OTRA: "bg-grey-2 text-grey-8",
     PENDING: "bg-grey-4 text-white"
   };
@@ -2291,6 +2816,21 @@ onMounted(() => {
   animation: fadeSlideIn 300ms var(--ease-out) forwards;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   transition: box-shadow 150ms var(--ease-out);
+  font-size: 13px;
+}
+
+/* Forzar tamaño de fuente uniforme en todos los hijos de la card */
+.comite-card-horizontal :deep(.q-chip__content),
+.comite-card-horizontal :deep(.q-chip),
+.comite-card-horizontal .text-caption,
+.comite-card-horizontal span {
+  font-size: 13px !important;
+}
+
+/* Alinear verticalmente los chips al mismo alto */
+.comite-card-horizontal :deep(.q-chip) {
+  height: 24px;
+  line-height: 24px;
 }
 
 @keyframes fadeSlideIn {
@@ -2338,26 +2878,116 @@ onMounted(() => {
 }
 
 /* ========================================
-   Ficha Badge
+   Ficha Badge - Neutro unificado
    ======================================== */
 .ficha-badge {
-  background: linear-gradient(135deg, #2e7d32, #43a047);
+  background: #455a64;
   color: white;
-  padding: 4px 12px;
+  padding: 0 10px;
   border-radius: 6px;
-  font-size: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  height: 24px;
+  line-height: 24px;
+  display: inline-flex;
+  align-items: center;
 }
 
-.ficha-pendiente {
-  background: linear-gradient(135deg, #ff9800, #f57c00);
+/* ========================================
+   Status chips
+   ======================================== */
+.status-chip {
+  font-size: 13px !important;
+  font-weight: 600;
+  border-radius: 4px !important;
+  margin: 0 0 0 8px !important;
+  height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
 }
 
-.ficha-agendado {
-  background: linear-gradient(135deg, #1565c0, #1976d2);
+.status-pending {
+  background: #fff3e0 !important;
+  color: #e65100 !important;
+  border: 1px solid #ffcc80;
 }
 
-.ficha-completado {
-  background: linear-gradient(135deg, #2e7d32, #43a047);
+.status-scheduled {
+  background: #e8eaf6 !important;
+  color: #283593 !important;
+  border: 1px solid #9fa8da;
+}
+
+.status-completed {
+  background: #e8f5e9 !important;
+  color: #1b5e20 !important;
+  border: 1px solid #a5d6a7;
+}
+
+.status-cancel {
+  background: #fce4ec !important;
+  color: #b71c1c !important;
+  border: 1px solid #f48fb1;
+}
+
+/* ========================================
+   Chips neutrales
+   ======================================== */
+.chip-neutral {
+  background: #f5f5f5 !important;
+  color: #424242 !important;
+  border: 1px solid #e0e0e0 !important;
+}
+
+.chip-creator {
+  background: #eceff1 !important;
+  color: #263238 !important;
+  border: 1px solid #b0bec5 !important;
+  font-weight: 600;
+}
+
+.chip-more {
+  background: #eeeeee !important;
+  color: #757575 !important;
+  font-weight: 600;
+}
+
+.chip-resolution {
+  background: #f3e5f5 !important;
+  color: #4a148c !important;
+  border: 1px solid #ce93d8 !important;
+  margin: 0 0 0 8px !important;
+  height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+/* ========================================
+   Separador de columnas
+   ======================================== */
+.sep-line {
+  color: #e0e0e0;
+  font-size: 18px;
+  user-select: none;
+}
+
+/* ========================================
+   Botones de acción icon-only
+   ======================================== */
+.action-icon-btn {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+
+.action-icon-btn :deep(.q-icon) {
+  font-size: 15px !important;
 }
 
 /* ========================================
@@ -2386,7 +3016,7 @@ onMounted(() => {
   max-width: 90vw !important;
   border-radius: 16px;
   opacity: 0;
-  animation: scaleIn 300ms var(--ease-out) forwards;
+  animation: scaleIn 300ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
 
 .dialog-card-large {
@@ -2394,7 +3024,7 @@ onMounted(() => {
   max-width: 90vw !important;
   border-radius: 16px;
   opacity: 0;
-  animation: scaleIn 300ms var(--ease-out) forwards;
+  animation: scaleIn 300ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
 
 @keyframes scaleIn {

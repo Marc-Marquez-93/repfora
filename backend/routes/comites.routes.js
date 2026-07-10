@@ -30,6 +30,7 @@ const {
   searchInstructors,
   searchCompetences,
   searchOutcomes,
+  sendCommitteeEmail,
 } = committeeCtrl;
 
 const routerComites = Router();
@@ -292,6 +293,7 @@ routerComites.post("/", authenticateComitesToken, registerCommittee);
  *         description: No autorizado
  */
 routerComites.put("/:id", authenticateComitesToken, updateCommittee);
+routerComites.post("/:id/send-email", authenticateComitesToken, sendCommitteeEmail);
 
 /**
  * @swagger

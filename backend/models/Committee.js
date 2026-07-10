@@ -89,16 +89,36 @@ const LearnerDetailSchema = new Schema(
     // --- RESULTADOS Y DICTAMEN (SE LLENAN AL FINALIZAR EL COMITÉ) ---
     decision: {
       type: String,
-      enum: [
-        "PLAN_DE_MEJORAMIENTO",
-        "LLAMADO_DE_ATENCION",
-        "CONDICIONAMIENTO_DE_MATRICULA",
-        "CANCELACION_DE_MATRICULA",
-        "OTRA",
-        "PENDING"
-      ],
       default: "PENDING"
     },
+    decisiones: {
+      type: [String],
+      default: []
+    },
+    severidad: {
+      type: String,
+      default: ""
+    },
+    resolucionNumero: {
+      type: String,
+      default: ""
+    },
+    resolucionFecha: {
+      type: String,
+      default: ""
+    },
+    resolucionDespues: {
+      type: Boolean,
+      default: false
+    },
+    planesMejoramiento: [
+      {
+        instructorId: { type: String },
+        instructorName: { type: String },
+        descripcion: { type: String },
+        fechaMaxima: { type: String }
+      }
+    ],
     conclusions: {
       type: String,
       default: ""

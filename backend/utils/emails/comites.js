@@ -24,7 +24,7 @@ const transporter = nodemailer.createTransport({
  * @param {string} subject - Asunto del mensaje.
  * @param {string} htmlContent - Cuerpo del mensaje en formato HTML.
  */
-export const sendEmail = async (to, subject, htmlContent) => {
+export const sendEmail = async (to, subject, htmlContent, extraAttachments = []) => {
     try {
         // Ruta absoluta a la imagen del logo (usando CID para embeberla)
         const logoPath = path.join(__dirname, '../../public/images/logoComites.png');
@@ -68,7 +68,8 @@ export const sendEmail = async (to, subject, htmlContent) => {
                     filename: 'logo-sena.png',
                     path: logoPath,
                     cid: 'logoSena' // Referenciado en el <img> con src="cid:logoSena"
-                }
+                },
+                ...extraAttachments
             ]
         };
 

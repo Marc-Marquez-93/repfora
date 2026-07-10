@@ -4,6 +4,7 @@ import Instructor from "../models/Instructor.js";
 import Competence from "../models/Competence.js";
 import Outcome from "../models/Outcome.js";
 import registerAction from "../middlewares/binnacle.js";
+import { sendEmail } from "../utils/emails/comites.js";
 
 const committeeCtrl = {};
 
@@ -585,4 +586,187 @@ committeeCtrl.searchOutcomes = async (req, res) => {
   }
 };
 
+// ── Enviar correo del comité ──────────────────────────────────────────────────
+committeeCtrl.sendCommitteeEmail = async (req, res) => {
+  const { id } = req.params;
+  const { tipo } = req.body; // 'CITACION' | 'MODIFICACION' | 'FINALIZACION'
+
+  try {
+    const committee = await Committee.findById(id)
+      .populate({ path: 'fiche', populate: { path: 'program' } })
+      .populate('requestingInstructors')
+      .populate('createdBy')
+      .populate('meetingCoordinador')
+      .populate('meetingInvitedInstructors')
+      .populate('meetingBienestar')
+      .populate('meetingNovedades');
+
+    if (!committee) {
+      return res.status(404).json({ msg: 'Comité no encontrado' });
+    }
+
+    // ── Recolectar destinatarios ─────────────────────────────────────────────
+    const destinatarios = new Set();
+
+    // Instructores solicitantes
+    (committee.requestingInstructors || []).forEach(i => { if (i?.email) destinatarios.add(i.email); });
+    if (committee.createdBy?.email) destinatarios.add(committee.createdBy.email);
+
+    // Participantes del comité
+    if (committee.meetingCoordinador?.email) destinatarios.add(committee.meetingCoordinador.email);
+    if (committee.meetingBienestar?.email)    destinatarios.add(committee.meetingBienestar.email);
+    if (committee.meetingNovedades?.email)    destinatarios.add(committee.meetingNovedades.email);
+    (committee.meetingInvitedInstructors || []).forEach(i => { if (i?.email) destinatarios.add(i.email); });
+
+    // Aprendices del comité
+    (committee.learners || []).forEach(l => { if (l?.email) destinatarios.add(l.email); });
+
+    // Correos adicionales manuales (vocero / representante)
+    if (committee.meetingVoceroCorreo)        destinatarios.add(committee.meetingVoceroCorreo);
+    if (committee.meetingRepresentanteCorreo) destinatarios.add(committee.meetingRepresentanteCorreo);
+
+    if (destinatarios.size === 0) {
+      return res.status(400).json({ msg: 'No hay destinatarios para enviar el correo' });
+    }
+
+    // ── Datos generales del comité ───────────────────────────────────────────
+    const ficha = committee.fiche?.number || 'N/A';
+    const programa = committee.fiche?.program?.name || 'Sin nombre';
+
+    const fechaFormateada = committee.meetingDate
+      ? new Date(committee.meetingDate).toLocaleDateString('es-CO', {
+          day: '2-digit', month: 'long', year: 'numeric',
+          timeZone: 'America/Bogota'
+        })
+      : 'Por confirmar';
+
+    const hora   = committee.meetingTime     || 'Por confirmar';
+    const lugar  = committee.meetingLocation || 'Por confirmar';
+
+    // ── Aprendices (tabla HTML) ───────────────────────────────────────────────
+    const rowsAprendices = (committee.learners || []).map(l => {
+      const tipoNov = l.noveltyType === 'ACADEMIC' ? 'Académica'
+                    : l.noveltyType === 'DISCIPLINARY' ? 'Disciplinaria'
+                    : 'Los dos tipos';
+      return `
+        <tr>
+          <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${l.name || 'N/A'}</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${l.documentType || 'CC'} ${l.documentNumber || ''}</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${tipoNov}</td>
+        </tr>`;
+    }).join('');
+
+    const tablaAprendices = `
+      <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;">
+        <thead>
+          <tr style="background-color:#f3f4f6;">
+            <th style="padding:8px 12px; text-align:left; border-bottom:2px solid #318335;">Aprendiz</th>
+            <th style="padding:8px 12px; text-align:left; border-bottom:2px solid #318335;">Documento</th>
+            <th style="padding:8px 12px; text-align:left; border-bottom:2px solid #318335;">Tipo Novedad</th>
+          </tr>
+        </thead>
+        <tbody>${rowsAprendices}</tbody>
+      </table>`;
+
+    // ── Decisiones por aprendiz (para FINALIZACION) ──────────────────────────
+    const decisionLabel = d => {
+      const m = {
+        PLAN_MEJORAMIENTO: 'Plan de Mejoramiento',
+        LLAMADO_ATENCION: 'Llamado de Atención',
+        CONDICIONAMIENTO: 'Condicionamiento de Matrícula',
+        CANCELACION: 'Cancelación de Matrícula',
+      };
+      return m[d] || d;
+    };
+
+    const rowsDecisiones = (committee.learners || []).map(l => {
+      const decs = (l.decisiones || []).map(decisionLabel).join(', ') || 'Sin decisión registrada';
+      return `
+        <tr>
+          <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${l.name || 'N/A'}</td>
+          <td style="padding:8px 12px; border-bottom:1px solid #e5e7eb;">${decs}</td>
+        </tr>`;
+    }).join('');
+
+    const tablaDecisiones = `
+      <table style="width:100%; border-collapse:collapse; font-size:13px; margin-top:8px;">
+        <thead>
+          <tr style="background-color:#f3f4f6;">
+            <th style="padding:8px 12px; text-align:left; border-bottom:2px solid #318335;">Aprendiz</th>
+            <th style="padding:8px 12px; text-align:left; border-bottom:2px solid #318335;">Decisión(es)</th>
+          </tr>
+        </thead>
+        <tbody>${rowsDecisiones}</tbody>
+      </table>`;
+
+    // ── Bloque de información general (usado en todos los tipos) ─────────────
+    const bloqueInfo = `
+      <div style="background-color:#f9fafb; border-left:4px solid #318335; border-radius:6px; padding:16px 20px; margin:16px 0;">
+        <p style="margin:4px 0;"><strong>Ficha:</strong> ${ficha}</p>
+        <p style="margin:4px 0;"><strong>Programa:</strong> ${programa}</p>
+        <p style="margin:4px 0;"><strong>Fecha:</strong> ${fechaFormateada}</p>
+        <p style="margin:4px 0;"><strong>Hora:</strong> ${hora}</p>
+        <p style="margin:4px 0;"><strong>Lugar:</strong> ${lugar}</p>
+      </div>`;
+
+    // ── Construir el HTML y asunto según el tipo ─────────────────────────────
+    let asunto, htmlBody;
+
+    if (tipo === 'CITACION') {
+      asunto = `📋 Citación a Comité Evaluador – Ficha ${ficha}`;
+      htmlBody = `
+        <h2 style="color:#318335; margin-bottom:4px;">Citación a Comité Evaluador</h2>
+        <p>Se le informa que ha sido convocado(a) a un <strong>Comité Evaluador</strong> del SENA.</p>
+        ${bloqueInfo}
+        <p><strong>Aprendices citados:</strong></p>
+        ${tablaAprendices}
+        <p style="margin-top:16px;">Por favor confirme su asistencia y prepare la documentación necesaria.</p>`;
+
+    } else if (tipo === 'MODIFICACION') {
+      asunto = `🔄 Modificación de Comité – Ficha ${ficha}`;
+      htmlBody = `
+        <h2 style="color:#d97706; margin-bottom:4px;">Modificación de Comité Evaluador</h2>
+        <p>Le informamos que los datos del <strong>Comité Evaluador</strong> han sido actualizados.</p>
+        ${bloqueInfo}
+        <p><strong>Aprendices citados:</strong></p>
+        ${tablaAprendices}
+        <p style="margin-top:16px;">Por favor tome nota de los cambios realizados.</p>`;
+
+    } else if (tipo === 'FINALIZACION') {
+      asunto = `✅ Resultado de Comité Evaluador – Ficha ${ficha}`;
+      htmlBody = `
+        <h2 style="color:#318335; margin-bottom:4px;">Resultado del Comité Evaluador</h2>
+        <p>El <strong>Comité Evaluador</strong> ha concluido. A continuación encontrará las decisiones tomadas:</p>
+        ${bloqueInfo}
+        <p><strong>Decisiones adoptadas:</strong></p>
+        ${tablaDecisiones}
+        <p style="margin-top:16px;">Las actas quedan disponibles para consulta en el sistema REPFORA.</p>`;
+
+    } else {
+      return res.status(400).json({ msg: `Tipo de correo desconocido: ${tipo}` });
+    }
+
+    // ── Enviar a cada destinatario ───────────────────────────────────────────
+    const toArray = Array.from(destinatarios);
+    const results = await Promise.allSettled(
+      toArray.map(email => sendEmail(email, asunto, htmlBody))
+    );
+
+    const enviados  = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    const fallidos  = results.length - enviados;
+
+    res.json({
+      msg: `Correos enviados: ${enviados} exitosos, ${fallidos} fallidos.`,
+      total: results.length,
+      enviados,
+      fallidos
+    });
+
+  } catch (error) {
+    console.error('Error enviando correos del comité:', error);
+    res.status(500).json({ msg: 'Error al enviar correos' });
+  }
+};
+
 export { committeeCtrl };
+
